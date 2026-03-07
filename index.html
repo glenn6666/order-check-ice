@@ -18,12 +18,10 @@
         input { flex: 1; padding: 12px; border: 2px solid #ddd; border-radius: 10px; outline: none; font-size: 16px; }
         button#searchBtn { padding: 12px 25px; background: var(--primary-color); color: white; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; }
 
-        /* 模糊搜尋候選按鈕區 */
         .candidate-area { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 15px; padding: 10px; background: #eef6fb; border-radius: 10px; display: none; }
         .candidate-btn { padding: 8px 15px; background: white; border: 1px solid var(--primary-color); color: var(--primary-color); border-radius: 20px; cursor: pointer; font-weight: bold; font-size: 14px; }
         .candidate-btn:hover { background: var(--primary-color); color: white; }
 
-        /* 搜尋結果 ID 強調 */
         .result-id-display { font-size: 1.5em; font-weight: 900; color: var(--primary-color); margin: 15px 0; padding: 10px; background: #fff; border-radius: 8px; border-left: 8px solid var(--primary-color); box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
 
         .section-title { margin: 25px 0 12px 0; padding: 12px; border-radius: 8px; font-weight: bold; font-size: 1.05em; }
@@ -43,6 +41,19 @@
         .summary-row { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #333; }
         .highlight-gold { color: var(--gold-color); font-size: 1.4em; font-weight: bold; } 
         .normal-white { color: #ffffff; font-size: 1.4em; font-weight: bold; }
+
+        /* 新增的警示文字樣式 */
+        .warning-footer { 
+            text-align: center; 
+            margin-top: 30px; 
+            padding: 15px; 
+            background-color: #fff3e0; 
+            color: #e67e22; 
+            border-radius: 10px; 
+            font-size: 0.9em; 
+            font-weight: bold;
+            border: 1px solid #ffe0b2;
+        }
         .sum-footer { text-align: center; font-size: 0.8em; color: #666; margin-top: 15px; }
     </style>
 </head>
@@ -63,6 +74,10 @@
 </div>
 
 <div id="resultArea"></div>
+
+<div class="warning-footer">
+    ⚠️ 系統偶有出錯的可能，若有問題請直接詢問版面小編
+</div>
 
 <script>
     const sheetId = '1ei5nO5UIA5rAbc1ZOCTnoMN45AATJ1AM1PyyYWA1yQk'; 
@@ -121,7 +136,6 @@
             await fetchData();
         }
 
-        // 找出所有符合關鍵字的唯一 ID
         const matchedIds = [...new Set(allData
             .filter((row, idx) => idx > 0 && row[2] === currentGroup && row[3].toLowerCase().includes(query) && row[1] !== "已取貨")
             .map(row => row[3])
@@ -135,7 +149,6 @@
             candidateArea.style.display = 'none';
             showFinalResults(matchedIds[0]);
         } else {
-            // 顯示多個候選人供點選
             candidateArea.style.display = 'flex';
             candidateArea.innerHTML = matchedIds.map(id => 
                 `<button class="candidate-btn" onclick="showFinalResults('${id.replace(/'/g, "\\'")}')">${id}</button>`
@@ -153,15 +166,12 @@
 
         let html = `<div class="result-id-display">📍 查詢 ID：${targetId}</div>`;
 
-        // 已到貨區塊
         html += `<div class="section-title title-arrived">📦 已到貨商品</div>`;
         html += arrivedList.length === 0 ? `<div class="empty-msg">目前沒有已到貨商品</div>` : arrivedList.map(r => createCard(r, 'arrived')).join('');
 
-        // 未到貨區塊
         html += `<div class="section-title title-not-arrived">🗓️ 未到貨商品</div>`;
         html += notArrivedList.length === 0 ? `<div class="empty-msg">目前沒有未到貨商品</div>` : notArrivedList.map(r => createCard(r, 'not-arrived')).join('');
 
-        // 總計
         const stats = {
             aItems: arrivedList.length,
             aQty: arrivedList.reduce((s, r) => s + (parseInt(r[6]) || 0), 0),
@@ -185,6 +195,7 @@
                     <div class="sum-label" style="color:white; font-size:1.1em; font-weight:bold;">總金額</div>
                     <div class="sum-val normal-white">$${(stats.aTotal + stats.nTotal).toLocaleString()}</div>
                 </div>
+                <div class="sum-footer">💡 狀態說明：[已取未付] 請補款、[已結未取] 記得領取喔！</div>
             </div>`;
 
         document.getElementById('resultArea').innerHTML = html;
