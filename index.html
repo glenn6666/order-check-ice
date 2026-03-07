@@ -13,11 +13,20 @@
         .group-selector { display: flex; gap: 10px; margin-bottom: 15px; }
         .group-btn { flex: 1; padding: 12px; border: 2px solid #e0e0e0; border-radius: 10px; cursor: pointer; background: white; font-weight: bold; transition: 0.3s; }
         .group-btn.active { border-color: var(--primary-color); background: var(--primary-color); color: white; }
+        
         .search-box { display: flex; gap: 8px; }
         input { flex: 1; padding: 12px; border: 2px solid #ddd; border-radius: 10px; outline: none; font-size: 16px; }
         button#searchBtn { padding: 12px 25px; background: var(--primary-color); color: white; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; }
 
-        .section-title { margin: 25px 0 12px 0; padding: 12px; border-radius: 8px; font-weight: bold; font-size: 1.05em; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        /* 模糊搜尋候選按鈕區 */
+        .candidate-area { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 15px; padding: 10px; background: #eef6fb; border-radius: 10px; display: none; }
+        .candidate-btn { padding: 8px 15px; background: white; border: 1px solid var(--primary-color); color: var(--primary-color); border-radius: 20px; cursor: pointer; font-weight: bold; font-size: 14px; }
+        .candidate-btn:hover { background: var(--primary-color); color: white; }
+
+        /* 搜尋結果 ID 強調 */
+        .result-id-display { font-size: 1.5em; font-weight: 900; color: var(--primary-color); margin: 15px 0; padding: 10px; background: #fff; border-radius: 8px; border-left: 8px solid var(--primary-color); box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+
+        .section-title { margin: 25px 0 12px 0; padding: 12px; border-radius: 8px; font-weight: bold; font-size: 1.05em; }
         .title-arrived { background-color: #e6f4ea; color: var(--arrived-green); border-left: 6px solid var(--arrived-green); }
         .title-not-arrived { background-color: #f1f3f4; color: var(--pending-gray); border-left: 6px solid var(--pending-gray); }
 
@@ -25,27 +34,15 @@
         .arrived-card { border-left-color: var(--arrived-green); }
         .not-arrived-card { border-left-color: var(--pending-gray); }
 
-        .status-tag { display: inline-block; padding: 2px 10px; border-radius: 6px; font-size: 0.85em; font-weight: bold; margin-bottom: 8px; }
-        .tag-arrived { background: #d3f9d8; color: #1e7e34; }
-        .tag-pending { background: #e9ecef; color: #495057; }
-
-        .item-header { display: flex; justify-content: space-between; font-weight: bold; font-size: 1.1em; align-items: flex-start; }
-        .price-text { color: #d93025; white-space: nowrap; margin-left: 10px; }
+        .item-header { display: flex; justify-content: space-between; font-weight: bold; font-size: 1.1em; }
+        .price-text { color: #d93025; }
         .item-info { color: #666; font-size: 0.95em; margin-top: 6px; }
         .note-text { margin-top: 10px; color: #0077b6; font-size: 0.9em; border-top: 1px dashed #eee; padding-top: 8px; font-style: italic; }
-        .empty-msg { text-align: center; padding: 30px; color: #adb5bd; background: #fff; border-radius: 12px; border: 2px dashed #dee2e6; margin: 10px 0; }
 
-        /* 總結區塊樣式調整 */
-        .summary-box { background: #1a1c1e; color: white; padding: 25px; border-radius: 18px; margin-top: 35px; box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
-        .summary-row { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #333; align-items: center; }
-        .summary-row:last-of-type { border-bottom: none; }
-        .sum-label { font-size: 0.95em; color: #aaa; line-height: 1.5; }
-        .sum-val { font-weight: bold; text-align: right; font-size: 1.1em; }
-        
-        /* 這裡套用妳要求的金色與白色 */
-        .highlight-gold { color: var(--gold-color); font-size: 1.4em; } 
-        .normal-white { color: #ffffff; font-size: 1.4em; }
-
+        .summary-box { background: #1a1c1e; color: white; padding: 25px; border-radius: 18px; margin-top: 35px; }
+        .summary-row { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #333; }
+        .highlight-gold { color: var(--gold-color); font-size: 1.4em; font-weight: bold; } 
+        .normal-white { color: #ffffff; font-size: 1.4em; font-weight: bold; }
         .sum-footer { text-align: center; font-size: 0.8em; color: #666; margin-top: 15px; }
     </style>
 </head>
@@ -59,9 +56,10 @@
         <button class="group-btn" onclick="setGroup('二群', this)">二群</button>
     </div>
     <div class="search-box">
-        <input type="text" id="idInput" placeholder="請輸入社群 ID (例如: @小武)">
-        <button id="searchBtn" onclick="performSearch()">搜尋</button>
+        <input type="text" id="idInput" placeholder="輸入名字的一個字篩選 (如: 小)">
+        <button id="searchBtn" onclick="handleSearchClick()">搜尋</button>
     </div>
+    <div id="candidateArea" class="candidate-area"></div>
 </div>
 
 <div id="resultArea"></div>
@@ -72,11 +70,14 @@
     const csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=${gid}`;
 
     let currentGroup = '一群';
+    let allData = [];
 
     function setGroup(group, btn) {
         currentGroup = group;
         document.querySelectorAll('.group-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
+        document.getElementById('candidateArea').style.display = 'none';
+        document.getElementById('resultArea').innerHTML = '';
     }
 
     function parseCSV(text) {
@@ -105,58 +106,62 @@
         return rows;
     }
 
-    async function performSearch() {
-        const idInput = document.getElementById('idInput').value.trim().toLowerCase();
-        if (!idInput) return alert('請輸入您的社群 ID！');
-        
-        const resultArea = document.getElementById('resultArea');
-        resultArea.innerHTML = '<div style="text-align:center; padding:40px; color:#666;">⏳ 正在連線北冰洋資料庫...</div>';
+    async function fetchData() {
+        const res = await fetch(csvUrl);
+        const text = await res.text();
+        allData = parseCSV(text);
+    }
 
-        try {
-            const res = await fetch(csvUrl);
-            const text = await res.text();
-            const allData = parseCSV(text);
+    async function handleSearchClick() {
+        const query = document.getElementById('idInput').value.trim().toLowerCase();
+        if (!query) return alert('請輸入關鍵字！');
 
-            const filtered = allData.filter((row, idx) => {
-                if (idx === 0) return false;
-                const status = row[1] || "";
-                return row[2] === currentGroup && 
-                       (row[3] || "").toLowerCase().includes(idInput) && 
-                       status !== "已取貨";
-            });
+        if (allData.length === 0) {
+            document.getElementById('resultArea').innerHTML = '⏳ 正在讀取資料...';
+            await fetchData();
+        }
 
-            renderUI(filtered);
-        } catch (e) { 
-            resultArea.innerHTML = '<div class="empty-msg">❌ 讀取資料失敗，請確認網路連線。</div>'; 
+        // 找出所有符合關鍵字的唯一 ID
+        const matchedIds = [...new Set(allData
+            .filter((row, idx) => idx > 0 && row[2] === currentGroup && row[3].toLowerCase().includes(query) && row[1] !== "已取貨")
+            .map(row => row[3])
+        )];
+
+        const candidateArea = document.getElementById('candidateArea');
+        if (matchedIds.length === 0) {
+            candidateArea.style.display = 'none';
+            document.getElementById('resultArea').innerHTML = '<div style="text-align:center; padding:20px;">🔍 找不到相符的客戶。</div>';
+        } else if (matchedIds.length === 1) {
+            candidateArea.style.display = 'none';
+            showFinalResults(matchedIds[0]);
+        } else {
+            // 顯示多個候選人供點選
+            candidateArea.style.display = 'flex';
+            candidateArea.innerHTML = matchedIds.map(id => 
+                `<button class="candidate-btn" onclick="showFinalResults('${id.replace(/'/g, "\\'")}')">${id}</button>`
+            ).join('');
+            document.getElementById('resultArea').innerHTML = '<div style="text-align:center; padding:10px; color:#666;">請點選下方正確的 ID：</div>';
         }
     }
 
-    function renderUI(items) {
-        const area = document.getElementById('resultArea');
-        if (items.length === 0) {
-            area.innerHTML = '<div class="empty-msg">🔍 在目前的群組中找不到您的待領取紀錄。</div>';
-            return;
-        }
-
+    function showFinalResults(targetId) {
+        document.getElementById('candidateArea').style.display = 'none';
+        const items = allData.filter(row => row[2] === currentGroup && row[3] === targetId && row[1] !== "已取貨");
+        
         const arrivedList = items.filter(r => ["未取貨", "已取未付", "已結未取"].includes(r[1]));
         const notArrivedList = items.filter(r => r[1] === "未到貨");
 
-        let html = `<div style="padding: 5px; font-weight: bold; color: #555;">📍 ID：${items[0][3]} (${currentGroup})</div>`;
+        let html = `<div class="result-id-display">📍 查詢 ID：${targetId}</div>`;
 
+        // 已到貨區塊
         html += `<div class="section-title title-arrived">📦 已到貨商品</div>`;
-        if (arrivedList.length === 0) {
-            html += `<div class="empty-msg">目前沒有已到貨商品</div>`;
-        } else {
-            arrivedList.forEach(r => html += createCard(r, 'arrived'));
-        }
+        html += arrivedList.length === 0 ? `<div class="empty-msg">目前沒有已到貨商品</div>` : arrivedList.map(r => createCard(r, 'arrived')).join('');
 
+        // 未到貨區塊
         html += `<div class="section-title title-not-arrived">🗓️ 未到貨商品</div>`;
-        if (notArrivedList.length === 0) {
-            html += `<div class="empty-msg">目前沒有未到貨商品</div>`;
-        } else {
-            notArrivedList.forEach(r => html += createCard(r, 'not-arrived'));
-        }
+        html += notArrivedList.length === 0 ? `<div class="empty-msg">目前沒有未到貨商品</div>` : notArrivedList.map(r => createCard(r, 'not-arrived')).join('');
 
+        // 總計
         const stats = {
             aItems: arrivedList.length,
             aQty: arrivedList.reduce((s, r) => s + (parseInt(r[6]) || 0), 0),
@@ -166,7 +171,6 @@
             nTotal: notArrivedList.reduce((s, r) => s + (parseInt(r[7].replace(/[^0-9]/g, '')) || 0), 0)
         };
 
-        // 底部總結區塊修改
         html += `
             <div class="summary-box">
                 <div class="summary-row">
@@ -181,27 +185,22 @@
                     <div class="sum-label" style="color:white; font-size:1.1em; font-weight:bold;">總金額</div>
                     <div class="sum-val normal-white">$${(stats.aTotal + stats.nTotal).toLocaleString()}</div>
                 </div>
-                <div class="sum-footer">💡 狀態說明：[已取未付] 請補款、[已結未取] 記得領取喔！</div>
-            </div>
-        `;
+            </div>`;
 
-        area.innerHTML = html;
+        document.getElementById('resultArea').innerHTML = html;
     }
 
     function createCard(row, type) {
-        const isArrived = type === 'arrived';
         const subtotal = (row[7] || "0").replace(/[^0-9]/g, '');
         return `
-            <div class="card ${isArrived ? 'arrived-card' : 'not-arrived-card'}">
-                <div class="status-tag ${isArrived ? 'tag-arrived' : 'tag-pending'}">${row[1]}</div>
+            <div class="card ${type === 'arrived' ? 'arrived-card' : 'not-arrived-card'}">
                 <div class="item-header">
                     <span>${row[4]}</span>
                     <span class="price-text">$${parseInt(subtotal).toLocaleString()}</span>
                 </div>
-                <div class="item-info">單價: $${row[5]} | 數量: ${row[6]}</div>
+                <div class="item-info">狀態: ${row[1]} | 單價: $${row[5]} | 數量: ${row[6]}</div>
                 ${row[8] ? `<div class="note-text">📝 備註: ${row[8]}</div>` : ''}
-            </div>
-        `;
+            </div>`;
     }
 </script>
 </body>
