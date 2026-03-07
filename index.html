@@ -3,199 +3,213 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>安星水產-訂單查詢系統</title>
+    <title>北冰洋水產訂單查詢</title>
     <style>
-        :root { --primary-color: #1a73e8; --arrived-green: #34a853; --pending-gray: #70757a; }
-        body { font-family: "Microsoft JhengHei", sans-serif; padding: 15px; max-width: 800px; margin: auto; background-color: #f8f9fa; }
+        body { font-family: "Microsoft JhengHei", -apple-system, sans-serif; padding: 15px; max-width: 800px; margin: auto; background-color: #f0f2f5; }
+        h2 { color: #1a73e8; text-align: center; margin-bottom: 20px; }
+        .search-box { display: flex; gap: 10px; margin-bottom: 10px; }
+        input { flex: 1; padding: 15px; border: 2px solid #1a73e8; border-radius: 8px; font-size: 16px; }
+        button { padding: 15px 20px; background-color: #1a73e8; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; }
         
-        /* 搜尋區 */
-        .filter-section { background: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); margin-bottom: 20px; }
-        .group-selector { display: flex; gap: 10px; margin-bottom: 15px; }
-        .group-btn { flex: 1; padding: 12px; border: 2px solid #eee; border-radius: 10px; cursor: pointer; background: white; font-weight: bold; }
-        .group-btn.active { border-color: var(--primary-color); background: var(--primary-color); color: white; }
-        .search-box { display: flex; gap: 8px; }
-        input { flex: 1; padding: 12px; border: 2px solid #ddd; border-radius: 10px; outline: none; }
-        button#searchBtn { padding: 12px 20px; background: var(--primary-color); color: white; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; }
+        .warning-text { 
+            color: #e67e22; font-size: 0.85em; text-align: center; margin-bottom: 20px; padding: 8px;
+            background-color: #fff3e0; border-radius: 5px; font-weight: bold;
+        }
 
-        /* 標題與清單 */
-        .section-title { margin: 25px 0 10px 0; padding: 10px; border-radius: 8px; font-weight: bold; display: flex; align-items: center; }
-        .title-arrived { background-color: #e6f4ea; color: var(--arrived-green); border-left: 5px solid var(--arrived-green); }
-        .title-not-arrived { background-color: #f1f3f4; color: var(--pending-gray); border-left: 5px solid var(--pending-gray); }
+        .section-title { margin: 20px 0 10px 0; padding: 8px 12px; border-radius: 5px; font-weight: bold; display: flex; align-items: center; }
+        .title-arrived { background-color: #e6f4ea; color: #1e8e3e; border-left: 5px solid #1e8e3e; }
+        .title-not-arrived { background-color: #f1f3f4; color: #5f6368; border-left: 5px solid #5f6368; }
 
-        .card { background: white; padding: 15px; margin-bottom: 10px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); position: relative; }
-        .arrived-card { border-left: 5px solid var(--arrived-green); }
-        .not-arrived-card { border-left: 5px solid var(--pending-gray); opacity: 0.85; }
+        .name-selector { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; padding: 15px; background: #e8f0fe; border-radius: 10px; border: 1px dashed #1a73e8; }
+        .name-btn { padding: 10px 15px; background: white; border: 1px solid #1a73e8; border-radius: 20px; color: #1a73e8; cursor: pointer; font-weight: bold; }
+        
+        .card { background: white; padding: 15px; margin-bottom: 12px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+        .arrived-card { border-left: 5px solid #34a853; }
+        .not-arrived-card { border-left: 5px solid #adb5bd; background-color: #fafafa; color: #6c757d; }
+        
+        .item-name { font-size: 1.1em; font-weight: bold; margin-bottom: 5px; }
+        .item-row { display: flex; justify-content: space-between; align-items: flex-end; }
+        .item-details { color: #666; font-size: 0.9em; line-height: 1.5; }
+        .item-price { font-weight: bold; color: #d93025; font-size: 1.1em; }
 
-        .status-tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.8em; font-weight: bold; margin-bottom: 5px; }
-        .tag-green { background: #d3f9d8; color: #2b8a3e; }
-        .tag-gray { background: #f1f3f4; color: #5f6368; }
-
-        .item-header { display: flex; justify-content: space-between; font-weight: bold; }
-        .price-text { color: #d93025; }
-        .item-info { color: #666; font-size: 0.9em; margin-top: 5px; }
-        .note-text { margin-top: 8px; color: #1a73e8; font-size: 0.85em; border-top: 1px dashed #eee; padding-top: 5px; }
-        .empty-msg { text-align: center; padding: 20px; color: #999; background: #fff; border-radius: 10px; border: 1px dashed #ddd; margin: 10px 0; }
-
-        /* 總結區 */
-        .summary-box { background: #2d3436; color: white; padding: 20px; border-radius: 15px; margin-top: 30px; }
-        .summary-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #444; }
-        .summary-row:last-of-type { border-bottom: none; }
-        .sum-label { font-size: 0.9em; color: #ccc; }
-        .sum-val { font-weight: bold; text-align: right; }
-        .highlight-green { color: #51cf66; }
-        .highlight-gold { color: #fcc419; font-size: 1.3em; }
+        .empty-msg { text-align: center; padding: 20px; color: #999; font-size: 0.9em; background: #fff; border-radius: 10px; border: 1px dashed #ddd; }
+        
+        .total-container { margin-top: 30px; background: #202124; color: white; border-radius: 10px; padding: 20px; }
+        .total-row { display: flex; justify-content: space-between; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid #3c4043; }
+        .total-row:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+        .total-label { font-size: 0.9em; color: #aaa; }
+        .total-value { font-weight: bold; text-align: right; }
+        .total-price { color: #ffab00; font-size: 1.2em; }
+        .no-data { text-align: center; padding: 50px 20px; color: #70757a; }
+        .instruction { font-size: 0.9em; color: #5f6368; margin-bottom: 10px; }
     </style>
 </head>
 <body>
 
-<h2>📦 安星水產泰山店訂單查詢</h2>
+<h2>📦 北冰洋水產訂單查詢</h2>
 
-<div class="filter-section">
-    <div class="group-selector">
-        <button class="group-btn active" onclick="setGroup('一群', this)">一群</button>
-        <button class="group-btn" onclick="setGroup('二群', this)">二群</button>
-    </div>
-    <div class="search-box">
-        <input type="text" id="idInput" placeholder="輸入社群 ID (例: @小武)">
-        <button id="searchBtn" onclick="performSearch()">搜尋</button>
-    </div>
+<div class="search-box">
+    <input type="text" id="nameInput" placeholder="輸入名字關鍵字 (例: 阿勝)">
+    <button onclick="searchNames()">搜尋</button>
 </div>
 
-<div id="resultArea"></div>
+<div class="warning-text">
+    ⚠️ 系統偶有出錯的可能，若有問題請直接詢問版面小編
+</div>
+
+<div id="selectionArea"></div>
+<div id="results"></div>
 
 <script>
-    const sheetId = '1ei5nO5UIA5rAbc1ZOCTnoMN45AATJ1AM1PyyYWA1yQk'; 
-    const gid = '1759685312'; 
+    const sheetId = '1pjTOojFm4-_rGpGGN9Nv31GCdYMPtSDQkfn8vbyBFLQ';
+    const gid = '171915529';
     const csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=${gid}`;
-
-    let currentGroup = '一群';
-
-    function setGroup(group, btn) {
-        currentGroup = group;
-        document.querySelectorAll('.group-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-    }
+    
+    let allRows = [];
 
     function parseCSV(text) {
         const rows = [];
-        let curRow = [];
-        let curCell = '';
+        let currentRow = [];
+        let currentField = '';
         let inQuotes = false;
         for (let i = 0; i < text.length; i++) {
-            let c = text[i];
+            const char = text[i]; const nextChar = text[i + 1];
             if (inQuotes) {
-                if (c === '"' && text[i+1] === '"') { curCell += '"'; i++; }
-                else if (c === '"') inQuotes = false;
-                else curCell += c;
+                if (char === '"' && nextChar === '"') { currentField += '"'; i++; }
+                else if (char === '"') inQuotes = false;
+                else currentField += char;
             } else {
-                if (c === '"') inQuotes = true;
-                else if (c === ',') { curRow.push(curCell.trim()); curCell = ''; }
-                else if (c === '\r' || c === '\n') {
-                    curRow.push(curCell.trim());
-                    if (curRow.length > 1) rows.push(curRow);
-                    curRow = []; curCell = '';
-                    if (c === '\r' && text[i+1] === '\n') i++;
-                } else curCell += c;
+                if (char === '"') inQuotes = true;
+                else if (char === ',') { currentRow.push(currentField); currentField = ''; }
+                else if (char === '\n' || char === '\r') {
+                    currentRow.push(currentField);
+                    if (currentRow.length > 1 || currentRow[0] !== '') rows.push(currentRow);
+                    currentRow = []; currentField = '';
+                    if (char === '\r' && nextChar === '\n') i++;
+                } else currentField += char;
             }
         }
-        if (curRow.length > 0 || curCell !== '') { curRow.push(curCell.trim()); rows.push(curRow); }
+        if (currentField || currentRow.length > 0) { currentRow.push(currentField); rows.push(currentRow); }
         return rows;
     }
 
-    async function performSearch() {
-        const idInput = document.getElementById('idInput').value.trim().toLowerCase();
-        if (!idInput) return alert('請輸入 ID');
-        document.getElementById('resultArea').innerHTML = '<div style="text-align:center; padding:30px;">🔍 正在查詢雲端資料...</div>';
+    async function searchNames() {
+        const query = document.getElementById('nameInput').value.trim().toLowerCase();
+        if (!query) return alert('請輸入名字關鍵字！');
+        
+        const selectionArea = document.getElementById('selectionArea');
+        const resultDiv = document.getElementById('results');
+        
+        selectionArea.innerHTML = ''; 
+        resultDiv.innerHTML = ''; 
 
         try {
-            const res = await fetch(csvUrl);
-            const text = await res.text();
-            const allData = parseCSV(text);
+            const response = await fetch(csvUrl);
+            const csvText = await response.text();
+            allRows = parseCSV(csvText);
 
-            const filtered = allData.filter((row, idx) => {
-                if (idx === 0) return false;
-                const status = row[1] || "";
-                return row[2] === currentGroup && (row[3] || "").toLowerCase().includes(idInput) && status !== "已取貨";
-            });
+            const matchedNames = new Set();
+            for (let i = 1; i < allRows.length; i++) {
+                const customer = (allRows[i][2] || "").trim();
+                const status = (allRows[i][0] || "").trim().toUpperCase();
+                if (customer.toLowerCase().includes(query) && status !== "TRUE") {
+                    matchedNames.add(customer);
+                }
+            }
 
-            renderUI(filtered);
-        } catch (e) { document.getElementById('resultArea').innerHTML = '讀取失敗'; }
+            if (matchedNames.size === 0) {
+                selectionArea.innerHTML = `<div class="no-data">查無符合「${document.getElementById('nameInput').value}」的待取貨紀錄。</div>`;
+            } else if (matchedNames.size === 1) {
+                showDetails(Array.from(matchedNames)[0]);
+            } else {
+                let btnHtml = `<div class="instruction">找到多個名稱，請點選正確的名稱：</div><div class="name-selector">`;
+                matchedNames.forEach(name => {
+                    btnHtml += `<button class="name-btn" onclick="showDetails('${name.replace(/'/g, "\\'")}')">${name}</button>`;
+                });
+                btnHtml += `</div>`;
+                selectionArea.innerHTML = btnHtml;
+            }
+        } catch (error) { 
+            console.error(error);
+            alert('系統忙碌中，請稍後再試。'); 
+        }
     }
 
-    function renderUI(items) {
-        const area = document.getElementById('resultArea');
-        if (items.length === 0) {
-            area.innerHTML = '<div class="empty-msg">查無待領取紀錄</div>';
-            return;
-        }
-
-        // 分類資料
-        const arrivedList = items.filter(r => ["未取貨", "已取未付", "已結未取"].includes(r[1]));
-        const notArrivedList = items.filter(r => r[1] === "未到貨");
-
-        let html = `<div style="font-weight:bold; color:#1a73e8; margin-bottom:10px;">📍 查詢結果：${items[0][3]}</div>`;
-
-        // 區塊1: 已到貨 (綠色)
-        html += `<div class="section-title title-arrived">✅ 已到貨商品 (現貨待領)</div>`;
-        if (arrivedList.length === 0) {
-            html += `<div class="empty-msg">目前沒有已到貨商品</div>`;
-        } else {
-            arrivedList.forEach(r => html += createCard(r, 'arrived'));
-        }
-
-        // 區塊2: 未到貨 (灰色)
-        html += `<div class="section-title title-not-arrived">⏳ 未到貨商品 (預購中)</div>`;
-        if (notArrivedList.length === 0) {
-            html += `<div class="empty-msg">目前沒有未到貨商品</div>`;
-        } else {
-            notArrivedList.forEach(r => html += createCard(r, 'not-arrived'));
-        }
-
-        // 底部總結
-        const stats = {
-            aItems: arrivedList.length,
-            aQty: arrivedList.reduce((s, r) => s + (parseInt(r[6]) || 0), 0),
-            aTotal: arrivedList.reduce((s, r) => s + (parseInt(r[7].replace(/[^0-9]/g, '')) || 0), 0),
-            nItems: notArrivedList.length,
-            nQty: notArrivedList.reduce((s, r) => s + (parseInt(r[6]) || 0), 0),
-            nTotal: notArrivedList.reduce((s, r) => s + (parseInt(r[7].replace(/[^0-9]/g, '')) || 0), 0)
+    function showDetails(targetName) {
+        const resultDiv = document.getElementById('results');
+        
+        let arrivedHtml = `<div class="section-title title-arrived">✅ 已到貨商品</div>`;
+        let notArrivedHtml = `<div class="section-title title-not-arrived">⏳ 未到貨商品 (待通知)</div>`;
+        
+        let stats = {
+            arrived: { items: 0, qty: 0, total: 0 },
+            notArrived: { items: 0, qty: 0, total: 0 }
         };
 
-        html += `
-            <div class="summary-box">
-                <div class="summary-row">
-                    <div class="sum-label">已到貨總計<br>(${stats.aItems}品項 / ${stats.aQty}件)</div>
-                    <div class="sum-val highlight-green">$${stats.aTotal.toLocaleString()}</div>
-                </div>
-                <div class="summary-row">
-                    <div class="sum-label">未到貨總計<br>(${stats.nItems}品項 / ${stats.nQty}件)</div>
-                    <div class="sum-val">$${stats.nTotal.toLocaleString()}</div>
-                </div>
-                <div class="summary-row" style="border:none; margin-top:10px;">
-                    <div class="sum-label" style="color:white; font-size:1em;">應付金額總額</div>
-                    <div class="sum-val highlight-gold">$${(stats.aTotal + stats.nTotal).toLocaleString()}</div>
-                </div>
-            </div>
-        `;
+        let hasArrived = false;
+        let hasNotArrived = false;
 
-        area.innerHTML = html;
-    }
+        for (let i = 1; i < allRows.length; i++) {
+            const row = allRows[i];
+            const status = (row[0] || "").trim().toUpperCase();
+            const note = (row[1] || "").trim();
+            const customer = (row[2] || "").trim();
+            const itemName = (row[3] || "").trim();
+            if (customer !== targetName || status === "TRUE" || itemName === "") continue;
 
-    function createCard(row, type) {
-        const isArrived = type === 'arrived';
-        const subtotal = (row[7] || "0").replace(/[^0-9]/g, '');
-        return `
-            <div class="card ${isArrived ? 'arrived-card' : 'not-arrived-card'}">
-                <div class="status-tag ${isArrived ? 'tag-green' : 'tag-gray'}">${row[1]}</div>
-                <div class="item-header">
-                    <span>${row[4]}</span>
-                    <span class="price-text">$${parseInt(subtotal).toLocaleString()}</span>
+            const qty = parseInt((row[4] || "").trim()) || 0;
+            const price = parseInt((row[5] || "").replace(/[$,]/g, '')) || 0;
+            const subtotal = parseInt((row[12] || "").replace(/[$,]/g, '')) || 0;
+            const isNotArrived = note.includes("未到貨");
+
+            const cardHtml = `
+                <div class="card ${isNotArrived ? 'not-arrived-card' : 'arrived-card'}">
+                    <div class="item-name">${itemName}</div>
+                    <div class="item-row">
+                        <div class="item-details">單價: $${price.toLocaleString()}<br>數量: ${qty}</div>
+                        <div class="item-price">$${subtotal.toLocaleString()}</div>
+                    </div>
+                </div>`;
+
+            if (isNotArrived) {
+                notArrivedHtml += cardHtml;
+                stats.notArrived.items++;
+                stats.notArrived.qty += qty;
+                stats.notArrived.total += subtotal;
+                hasNotArrived = true;
+            } else {
+                arrivedHtml += cardHtml;
+                stats.arrived.items++;
+                stats.arrived.qty += qty;
+                stats.arrived.total += subtotal;
+                hasArrived = true;
+            }
+        }
+
+        if (!hasArrived) arrivedHtml += `<div class="empty-msg">目前沒有已到貨商品</div>`;
+        if (!hasNotArrived) notArrivedHtml += `<div class="empty-msg">目前沒有未到貨商品</div>`;
+
+        const summaryHtml = `
+            <div class="total-container">
+                <div style="font-size:0.9em; margin-bottom:15px; color:#ffab00;">📊 查詢總結：${targetName}</div>
+                <div class="total-row">
+                    <div class="total-label">已到貨合計<br>(${stats.arrived.items}品項 / ${stats.arrived.qty}商品)</div>
+                    <div class="total-value total-price">$${stats.arrived.total.toLocaleString()}</div>
                 </div>
-                <div class="item-info">單價: $${row[5]} | 數量: ${row[6]}</div>
-                ${row[8] ? `<div class="note-text">📝 備註: ${row[8]}</div>` : ''}
-            </div>
-        `;
+                <div class="total-row">
+                    <div class="total-label">未到貨合計<br>(${stats.notArrived.items}品項 / ${stats.notArrived.qty}商品)</div>
+                    <div class="total-value">$${stats.notArrived.total.toLocaleString()}</div>
+                </div>
+                <div class="total-row" style="border-top: 1px solid #555; padding-top:15px; margin-top:5px;">
+                    <div class="total-label" style="color:#fff;">應付金額總計</div>
+                    <div class="total-value" style="font-size:1.4em; color:#fff;">$${(stats.arrived.total + stats.notArrived.total).toLocaleString()}</div>
+                </div>
+            </div>`;
+
+        resultDiv.innerHTML = `<div style="margin-bottom:10px; font-weight:bold; color:#1a73e8;">📍 查詢結果：</div>` + arrivedHtml + notArrivedHtml + summaryHtml;
+        document.getElementById('selectionArea').innerHTML = '';
     }
 </script>
+
 </body>
 </html>
