@@ -5,13 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>北冰洋水產訂單查詢系統</title>
     <style>
-        :root { --primary-color: #0077b6; --arrived-green: #2d8a4e; --pending-gray: #6c757d; --gold-color: #ffd43b; }
+        :root { --primary-color: #0077b6; --arrived-green: #2d8a4e; --pending-gray: #6c757d; --gold-color: #ffd43b; --paid-color: #94a3b8; }
         body { font-family: "Microsoft JhengHei", sans-serif; padding: 15px; max-width: 800px; margin: auto; background-color: #f0f4f8; color: #333; }
         
         h2 { color: var(--primary-color); text-align: center; margin-bottom: 25px; letter-spacing: 2px; }
         .filter-section { background: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); margin-bottom: 20px; }
         .group-selector { display: flex; gap: 10px; margin-bottom: 15px; }
-        .group-btn { flex: 1; padding: 12px; border: 2px solid #e0e0e0; border-radius: 10px; cursor: pointer; background: white; font-weight: bold; transition: 0.3s; }
+        .group-btn { flex: 1; padding: 12px; border: 2px solid #e0e0e0; border-radius: 10px; cursor: pointer; background: white; font-weight: bold; }
         .group-btn.active { border-color: var(--primary-color); background: var(--primary-color); color: white; }
         
         .search-box { display: flex; gap: 8px; }
@@ -19,42 +19,37 @@
         button#searchBtn { padding: 12px 25px; background: var(--primary-color); color: white; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; }
 
         .candidate-area { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 15px; padding: 10px; background: #eef6fb; border-radius: 10px; display: none; }
-        .candidate-btn { padding: 8px 15px; background: white; border: 1px solid var(--primary-color); color: var(--primary-color); border-radius: 20px; cursor: pointer; font-weight: bold; font-size: 14px; }
-        .candidate-btn:hover { background: var(--primary-color); color: white; }
+        .candidate-btn { padding: 8px 15px; background: white; border: 1px solid var(--primary-color); color: var(--primary-color); border-radius: 20px; cursor: pointer; font-weight: bold; }
 
-        .result-id-display { font-size: 1.5em; font-weight: 900; color: var(--primary-color); margin: 15px 0; padding: 10px; background: #fff; border-radius: 8px; border-left: 8px solid var(--primary-color); box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .result-id-display { font-size: 1.6em; font-weight: 900; color: var(--primary-color); margin: 15px 0; padding: 12px; background: #fff; border-radius: 8px; border-left: 10px solid var(--primary-color); box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
 
-        .section-title { margin: 25px 0 12px 0; padding: 12px; border-radius: 8px; font-weight: bold; font-size: 1.05em; }
+        .section-title { margin: 25px 0 12px 0; padding: 12px; border-radius: 8px; font-weight: bold; font-size: 1.1em; }
         .title-arrived { background-color: #e6f4ea; color: var(--arrived-green); border-left: 6px solid var(--arrived-green); }
         .title-not-arrived { background-color: #f1f3f4; color: var(--pending-gray); border-left: 6px solid var(--pending-gray); }
 
-        .card { background: white; padding: 15px; margin-bottom: 12px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); border-left: 6px solid transparent; }
+        .card { background: white; padding: 15px; margin-bottom: 12px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); border-left: 8px solid transparent; }
         .arrived-card { border-left-color: var(--arrived-green); }
         .not-arrived-card { border-left-color: var(--pending-gray); }
 
-        .item-header { display: flex; justify-content: space-between; font-weight: bold; font-size: 1.1em; }
-        .price-text { color: #d93025; }
-        .item-info { color: #666; font-size: 0.95em; margin-top: 6px; }
+        /* 狀態標籤強化 */
+        .status-tag { display: inline-block; padding: 4px 12px; border-radius: 6px; font-size: 0.95em; font-weight: 900; margin-bottom: 10px; text-transform: uppercase; }
+        .tag-green { background: #2d8a4e; color: white; }
+        .tag-gray { background: #6c757d; color: white; }
+
+        .item-header { display: flex; justify-content: space-between; font-weight: bold; font-size: 1.15em; }
+        .price-text { color: #d93025; font-size: 1.1em; }
+        .paid-text { color: var(--paid-color); font-weight: bold; }
+        
+        .item-info { color: #666; font-size: 1em; margin-top: 6px; }
         .note-text { margin-top: 10px; color: #0077b6; font-size: 0.9em; border-top: 1px dashed #eee; padding-top: 8px; font-style: italic; }
+        .empty-msg { text-align: center; padding: 30px; color: #999; background: #fff; border-radius: 12px; border: 2px dashed #dee2e6; margin: 10px 0; }
 
         .summary-box { background: #1a1c1e; color: white; padding: 25px; border-radius: 18px; margin-top: 35px; }
         .summary-row { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #333; }
-        .highlight-gold { color: var(--gold-color); font-size: 1.4em; font-weight: bold; } 
-        .normal-white { color: #ffffff; font-size: 1.4em; font-weight: bold; }
+        .highlight-gold { color: var(--gold-color); font-size: 1.5em; font-weight: bold; } 
+        .normal-white { color: #ffffff; font-size: 1.5em; font-weight: bold; }
 
-        /* 新增的警示文字樣式 */
-        .warning-footer { 
-            text-align: center; 
-            margin-top: 30px; 
-            padding: 15px; 
-            background-color: #fff3e0; 
-            color: #e67e22; 
-            border-radius: 10px; 
-            font-size: 0.9em; 
-            font-weight: bold;
-            border: 1px solid #ffe0b2;
-        }
-        .sum-footer { text-align: center; font-size: 0.8em; color: #666; margin-top: 15px; }
+        .warning-footer { text-align: center; margin-top: 30px; padding: 15px; background-color: #fff3e0; color: #e67e22; border-radius: 10px; font-size: 0.95em; font-weight: bold; border: 1px solid #ffe0b2; }
     </style>
 </head>
 <body>
@@ -87,6 +82,9 @@
     let currentGroup = '一群';
     let allData = [];
 
+    // 定義哪些狀態是「已結清」不計入金額
+    const PAID_STATUS = ["已結未取", "已釋出", "已結寄黑貓", "已結寄 7-11", "已結未到"];
+
     function setGroup(group, btn) {
         currentGroup = group;
         document.querySelectorAll('.group-btn').forEach(b => b.classList.remove('active'));
@@ -95,64 +93,33 @@
         document.getElementById('resultArea').innerHTML = '';
     }
 
-    function parseCSV(text) {
-        const rows = [];
-        let curRow = [];
-        let curCell = '';
-        let inQuotes = false;
-        for (let i = 0; i < text.length; i++) {
-            let c = text[i];
-            if (inQuotes) {
-                if (c === '"' && text[i+1] === '"') { curCell += '"'; i++; }
-                else if (c === '"') inQuotes = false;
-                else curCell += c;
-            } else {
-                if (c === '"') inQuotes = true;
-                else if (c === ',') { curRow.push(curCell.trim()); curCell = ''; }
-                else if (c === '\r' || c === '\n') {
-                    curRow.push(curCell.trim());
-                    if (curRow.length > 1) rows.push(curRow);
-                    curRow = []; curCell = '';
-                    if (c === '\r' && text[i+1] === '\n') i++;
-                } else curCell += c;
-            }
-        }
-        if (curRow.length > 0 || curCell !== '') { curRow.push(curCell.trim()); rows.push(curRow); }
-        return rows;
-    }
-
     async function fetchData() {
         const res = await fetch(csvUrl);
         const text = await res.text();
-        allData = parseCSV(text);
+        // 簡易 CSV 解析
+        allData = text.split(/\r?\n/).map(line => line.split(',').map(cell => cell.replace(/^"|"$/g, '').trim()));
     }
 
     async function handleSearchClick() {
         const query = document.getElementById('idInput').value.trim().toLowerCase();
         if (!query) return alert('請輸入關鍵字！');
-
-        if (allData.length === 0) {
-            document.getElementById('resultArea').innerHTML = '⏳ 正在讀取資料...';
-            await fetchData();
-        }
+        if (allData.length === 0) await fetchData();
 
         const matchedIds = [...new Set(allData
-            .filter((row, idx) => idx > 0 && row[2] === currentGroup && row[3].toLowerCase().includes(query) && row[1] !== "已取貨")
+            .filter((row, idx) => idx > 0 && row[2] === currentGroup && (row[3]||"").toLowerCase().includes(query) && row[1] !== "已取貨")
             .map(row => row[3])
         )];
 
         const candidateArea = document.getElementById('candidateArea');
         if (matchedIds.length === 0) {
             candidateArea.style.display = 'none';
-            document.getElementById('resultArea').innerHTML = '<div style="text-align:center; padding:20px;">🔍 找不到相符的客戶。</div>';
+            document.getElementById('resultArea').innerHTML = '<div class="empty-msg">🔍 找不到相符的客戶。</div>';
         } else if (matchedIds.length === 1) {
             candidateArea.style.display = 'none';
             showFinalResults(matchedIds[0]);
         } else {
             candidateArea.style.display = 'flex';
-            candidateArea.innerHTML = matchedIds.map(id => 
-                `<button class="candidate-btn" onclick="showFinalResults('${id.replace(/'/g, "\\'")}')">${id}</button>`
-            ).join('');
+            candidateArea.innerHTML = matchedIds.map(id => `<button class="candidate-btn" onclick="showFinalResults('${id}')">${id}</button>`).join('');
             document.getElementById('resultArea').innerHTML = '<div style="text-align:center; padding:10px; color:#666;">請點選下方正確的 ID：</div>';
         }
     }
@@ -161,55 +128,65 @@
         document.getElementById('candidateArea').style.display = 'none';
         const items = allData.filter(row => row[2] === currentGroup && row[3] === targetId && row[1] !== "已取貨");
         
-        const arrivedList = items.filter(r => ["未取貨", "已取未付", "已結未取"].includes(r[1]));
-        const notArrivedList = items.filter(r => r[1] === "未到貨");
+        // 分類邏輯更新
+        const arrivedList = items.filter(r => ["未取貨", "已取未付", "已結未取", "已釋出", "已結寄黑貓", "已結寄 7-11"].includes(r[1]));
+        const notArrivedList = items.filter(r => ["未到貨", "已結未到"].includes(r[1]));
 
         let html = `<div class="result-id-display">📍 查詢 ID：${targetId}</div>`;
 
-        html += `<div class="section-title title-arrived">📦 已到貨商品</div>`;
+        // 綠色區塊
+        html += `<div class="section-title title-arrived">✅ 已到貨商品 (待處理)</div>`;
         html += arrivedList.length === 0 ? `<div class="empty-msg">目前沒有已到貨商品</div>` : arrivedList.map(r => createCard(r, 'arrived')).join('');
 
-        html += `<div class="section-title title-not-arrived">🗓️ 未到貨商品</div>`;
+        // 灰色區塊
+        html += `<div class="section-title title-not-arrived">⏳ 未到貨商品 (預購中)</div>`;
         html += notArrivedList.length === 0 ? `<div class="empty-msg">目前沒有未到貨商品</div>` : notArrivedList.map(r => createCard(r, 'not-arrived')).join('');
 
-        const stats = {
-            aItems: arrivedList.length,
-            aQty: arrivedList.reduce((s, r) => s + (parseInt(r[6]) || 0), 0),
-            aTotal: arrivedList.reduce((s, r) => s + (parseInt(r[7].replace(/[^0-9]/g, '')) || 0), 0),
-            nItems: notArrivedList.length,
-            nQty: notArrivedList.reduce((s, r) => s + (parseInt(r[6]) || 0), 0),
-            nTotal: notArrivedList.reduce((s, r) => s + (parseInt(r[7].replace(/[^0-9]/g, '')) || 0), 0)
+        // 金額計算邏輯更新：排除 PAID_STATUS
+        const calc = (list) => {
+            const filtered = list.filter(r => !PAID_STATUS.includes(r[1]));
+            return {
+                items: list.length, // 品項數維持全部顯示
+                qty: list.reduce((s, r) => s + (parseInt(r[6]) || 0), 0),
+                total: filtered.reduce((s, r) => s + (parseInt(r[7].replace(/[^0-9]/g, '')) || 0), 0)
+            };
         };
+
+        const aStats = calc(arrivedList);
+        const nStats = calc(notArrivedList);
 
         html += `
             <div class="summary-box">
                 <div class="summary-row">
-                    <div class="sum-label">已到貨合計<br><small>${stats.aItems} 品項 / ${stats.aQty} 件商品</small></div>
-                    <div class="sum-val highlight-gold">$${stats.aTotal.toLocaleString()}</div>
+                    <div class="sum-label">已到貨合計<br><small>${aStats.items} 品項 / ${aStats.qty} 件商品</small></div>
+                    <div class="sum-val highlight-gold">$${aStats.total.toLocaleString()}</div>
                 </div>
                 <div class="summary-row">
-                    <div class="sum-label">未到貨合計<br><small>${stats.nItems} 品項 / ${stats.nQty} 件商品</small></div>
-                    <div class="sum-val">$${stats.nTotal.toLocaleString()}</div>
+                    <div class="sum-label">未到貨合計<br><small>${nStats.items} 品項 / ${nStats.qty} 件商品</small></div>
+                    <div class="sum-val">$${nStats.total.toLocaleString()}</div>
                 </div>
                 <div class="summary-row" style="border:none; margin-top:10px; padding-top:20px;">
                     <div class="sum-label" style="color:white; font-size:1.1em; font-weight:bold;">總金額</div>
-                    <div class="sum-val normal-white">$${(stats.aTotal + stats.nTotal).toLocaleString()}</div>
+                    <div class="sum-val normal-white">$${(aStats.total + nStats.total).toLocaleString()}</div>
                 </div>
-                <div class="sum-footer">💡 狀態說明：[已取未付] 請補款、[已結未取] 記得領取喔！</div>
             </div>`;
 
         document.getElementById('resultArea').innerHTML = html;
     }
 
     function createCard(row, type) {
+        const status = row[1];
+        const isPaid = PAID_STATUS.includes(status);
         const subtotal = (row[7] || "0").replace(/[^0-9]/g, '');
+        
         return `
             <div class="card ${type === 'arrived' ? 'arrived-card' : 'not-arrived-card'}">
+                <div class="status-tag ${type === 'arrived' ? 'tag-green' : 'tag-gray'}">${status}</div>
                 <div class="item-header">
                     <span>${row[4]}</span>
-                    <span class="price-text">$${parseInt(subtotal).toLocaleString()}</span>
+                    <span class="${isPaid ? 'paid-text' : 'price-text'}">${isPaid ? '已結清' : '$' + parseInt(subtotal).toLocaleString()}</span>
                 </div>
-                <div class="item-info">狀態: ${row[1]} | 單價: $${row[5]} | 數量: ${row[6]}</div>
+                <div class="item-info">單價: $${row[5]} | 數量: ${row[6]}</div>
                 ${row[8] ? `<div class="note-text">📝 備註: ${row[8]}</div>` : ''}
             </div>`;
     }
