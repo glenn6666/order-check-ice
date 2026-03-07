@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>安星水產-訂單查詢系統 (新版)</title>
+    <style>
+        :root { --primary-color: #1a73e8; --group-active: #34a853; --accent-color: #d93025; }
+        body { font-family: "Microsoft JhengHei", sans-serif; padding: 15px; max-width: 800px; margin: auto; background-color: #f4f7f9; color: #333; }
+        h2 { color: var(--primary-color); text-align: center; margin-bottom: 20px; }
+        
+        /* 搜尋區 */
+        .filter-section { background: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 20px; }
+        .group-selector { display: flex; gap: 10px; margin-bottom: 15px; }
+        .group-btn { flex: 1; padding: 12px; border: 2px solid #eee; border-radius: 10px; cursor: pointer; background: white; font-weight: bold; transition: 0.3s; }
+        .group-btn.active { border-color: var(--group-active); background: var(--group-active); color: white; }
+        
+        .search-box { display: flex; gap: 8px; }
+        input { flex: 1; padding: 12px; border: 2px solid #ddd; border-radius: 10px; font-size: 16px; outline: none; }
+        input:focus { border-color: var(--primary-color); }
+        button#searchBtn { padding: 12px 25px; background: var(--primary-color); color: white; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; }
+
+        /* 卡片設計 */
+        .card { background: white; padding: 15px; margin-bottom: 12px; border-radius: 12px; border-left: 6px solid #ccc; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+        .status-tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.8em; font-weight: bold; margin-bottom: 8px; background: #eee; }
+        /* 根據狀態變色 */
+        .tag-未到貨 { background: #fff3bf; color: #f08c00; }
+        .tag-未取貨 { background: #ffec99; color: #e67700; }
+        .tag-已取未付 { background: #ffc9c9; color: #e03131; }
+        .tag-已結未取 { background: #d3f9d8; color: #2b8a3e; }
+
+        .item-header { display: flex; justify-content: space-between; font-weight: bold; font-size: 1.1em; }
+        .item-info { color: #666; font-size: 0.9em; margin-top: 4px; }
+        .price-tag { color: var(--accent-color); font-weight: bold; font-size: 1.1em; }
+        .note-box { margin-top: 8px; padding-top: 8px; border-top: 1px dashed #eee; color: #0066cc; font-size: 0.9em; font-style: italic; }
+
+        /* 總計區 */
+        .summary-box { background: #2c3e50; color: white; padding: 20px; border-radius: 15px; margin-top: 25px; }
+        .summary-row { display: flex; justify-content: space-between; margin-bottom: 10px; border-bottom: 1px solid #455a64; padding-bottom: 8px; }
+        .total-amount { font-size: 1.6em; color: #f1c40f; font-weight: bold; }
+        .no-data { text-align: center; padding: 50px; color: #999; }
+    </style>
+</head>
+<body>
+
+<h2>📦 安星水產泰山店訂單查詢</h2>
+
+<div class="filter-section">
+    <div class="group-selector">
+        <button class="group-btn active" onclick="setGroup('一群', this)">一群</button>
+        <button class="group-btn" onclick="setGroup('二群', this)">二群</button>
+    </div>
+    <div class="search-box">
+        <input type="text" id="idInput" placeholder="輸入社群 ID (例: @小武)">
+        <button id="searchBtn" onclick="performSearch()">搜尋</button>
+    </div>
+</div>
+
+<div id="resultArea"></div>
+
+<script>
+    const sheetId = '1ei5nO5UIA5rAbc1ZOCTnoMN45AATJ1AM1PyyYWA1yQk'; 
+    const gid = '1759685312'; 
+    const csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=${gid}`;
+
+    let currentGroup = '一群';
+
+    function setGroup(group, btn) {
+        currentGroup = group;
+        document.querySelectorAll('.group-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+    }
+
+    function parseCSV(text) {
+        const rows = [];
+        let curRow = [];
+        let curCell = '';
+        let inQuotes = false;
+        for (let i = 0; i < text.length; i++) {
+            let c = text[i];
+            if (inQuotes) {
+                if (c === '"' && text[i+1] === '"') { curCell += '"'; i++; }
+                else if (c === '"') inQuotes = false;
+                else curCell += c;
+            } else {
+                if (c === '"') inQuotes = true;
+                else if (c === ',') { curRow.push(curCell.trim()); curCell = ''; }
+                else if (c === '\r' || c === '\n') {
+                    curRow.push(curCell.trim());
+                    if (curRow.length > 1) rows.push(curRow);
+                    curRow = []; curCell = '';
+                    if (c === '\r' && text[i+1] === '\n') i++;
+                } else curCell += c;
+            }
+        }
+        if (curRow.length > 0 || curCell !== '') { curRow.push(curCell.trim()); rows.push(curRow); }
+        return rows;
+    }
+
+    async function performSearch() {
+        const idInput = document.getElementById('idInput').value.trim().toLowerCase();
+        const resultArea = document.getElementById('resultArea');
+        if (!idInput) { alert('請輸入 ID！'); return; }
+
+        resultArea.innerHTML = '<div style="text-align:center; padding:20px;">讀取中...</div>';
+
+        try {
+            const res = await fetch(csvUrl);
+            const text = await res.text();
+            const data = parseCSV(text);
+
+            // 篩選邏輯
+            const results = data.filter((row, index) => {
+                if (index === 0) return false;
+                const status = row[1] || "";
+                const group = row[2] || "";
+                const socialID = (row[3] || "").toLowerCase();
+                
+                // 排除已取貨/已領取的資料，只顯示未完成狀態
+                const isPending = ["未到貨", "未取貨", "已取未付", "已結未取"].includes(status);
+                
+                return group === currentGroup && socialID.includes(idInput) && isPending;
+            });
+
+            renderResults(results, idInput);
+        } catch (err) {
+            resultArea.innerHTML = '<div class="no-data">讀取失敗，請確認網路連線。</div>';
+        }
+    }
+
+    function renderResults(items, query) {
+        const resultArea = document.getElementById('resultArea');
+        if (items.length === 0) {
+            resultArea.innerHTML = `<div class="no-data">查無【${currentGroup}】的待處理紀錄。</div>`;
+            return;
+        }
+
+        let html = `<div style="margin-bottom:10px; font-weight:bold; color:#1a73e8;">📍 查詢結果：${items[0][3]}</div>`;
+        let totalSum = 0;
+
+        items.forEach(item => {
+            const status = item[1];
+            const itemName = item[4];
+            const price = item[5];
+            const qty = item[6];
+            const subtotal = parseInt((item[7] || "0").replace(/[^0-9]/g, '')) || 0;
+            const note = item[8] || ""; // I 欄位：備註
+
+            totalSum += subtotal;
+
+            html += `
+                <div class="card" style="border-left-color: ${getStatusColor(status)}">
+                    <div class="status-tag tag-${status}">${status}</div>
+                    <div class="item-header">
+                        <span>${itemName}</span>
+                        <span class="price-tag">$${subtotal.toLocaleString()}</span>
+                    </div>
+                    <div class="item-info">單價: $${price} | 數量: ${qty}</div>
+                    ${note ? `<div class="note-box">📝 備註: ${note}</div>` : ''}
+                </div>
+            `;
+        });
+
+        html += `
+            <div class="summary-box">
+                <div class="summary-row"><span>待處理品項</span><span>${items.length} 筆</span></div>
+                <div class="summary-row" style="border:none;">
+                    <span style="font-size:1.1em;">應付金額總計</span>
+                    <span class="total-amount">$${totalSum.toLocaleString()}</span>
+                </div>
+                <div style="text-align:center; font-size:0.8em; color:#bdc3c7; margin-top:10px;">
+                    💡 狀態說明：[已取未付] 請補款、[已結未取] 記得帶走喔！
+                </div>
+            </div>
+        `;
+        resultArea.innerHTML = html;
+    }
+
+    function getStatusColor(s) {
+        switch(s) {
+            case "已取未付": return "#e03131";
+            case "未到貨": return "#f08c00";
+            case "未取貨": return "#e67700";
+            case "已結未取": return "#2b8a3e";
+            default: return "#ccc";
+        }
+    }
+</script>
+
+</body>
+</html>
