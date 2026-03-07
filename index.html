@@ -3,42 +3,47 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>北冰洋水產-訂單查詢系統</title>
+    <title>安星水產-訂單查詢系統</title>
     <style>
-        :root { --primary-color: #1a73e8; --group-active: #34a853; --accent-color: #d93025; }
-        body { font-family: "Microsoft JhengHei", sans-serif; padding: 15px; max-width: 800px; margin: auto; background-color: #f4f7f9; color: #333; }
-        h2 { color: var(--primary-color); text-align: center; margin-bottom: 20px; }
+        :root { --primary-color: #1a73e8; --arrived-green: #34a853; --pending-gray: #70757a; }
+        body { font-family: "Microsoft JhengHei", sans-serif; padding: 15px; max-width: 800px; margin: auto; background-color: #f8f9fa; }
         
         /* 搜尋區 */
-        .filter-section { background: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 20px; }
+        .filter-section { background: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); margin-bottom: 20px; }
         .group-selector { display: flex; gap: 10px; margin-bottom: 15px; }
-        .group-btn { flex: 1; padding: 12px; border: 2px solid #eee; border-radius: 10px; cursor: pointer; background: white; font-weight: bold; transition: 0.3s; }
-        .group-btn.active { border-color: var(--group-active); background: var(--group-active); color: white; }
-        
+        .group-btn { flex: 1; padding: 12px; border: 2px solid #eee; border-radius: 10px; cursor: pointer; background: white; font-weight: bold; }
+        .group-btn.active { border-color: var(--primary-color); background: var(--primary-color); color: white; }
         .search-box { display: flex; gap: 8px; }
-        input { flex: 1; padding: 12px; border: 2px solid #ddd; border-radius: 10px; font-size: 16px; outline: none; }
-        input:focus { border-color: var(--primary-color); }
-        button#searchBtn { padding: 12px 25px; background: var(--primary-color); color: white; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; }
+        input { flex: 1; padding: 12px; border: 2px solid #ddd; border-radius: 10px; outline: none; }
+        button#searchBtn { padding: 12px 20px; background: var(--primary-color); color: white; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; }
 
-        /* 卡片設計 */
-        .card { background: white; padding: 15px; margin-bottom: 12px; border-radius: 12px; border-left: 6px solid #ccc; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
-        .status-tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.8em; font-weight: bold; margin-bottom: 8px; background: #eee; }
-        /* 根據狀態變色 */
-        .tag-未到貨 { background: #fff3bf; color: #f08c00; }
-        .tag-未取貨 { background: #ffec99; color: #e67700; }
-        .tag-已取未付 { background: #ffc9c9; color: #e03131; }
-        .tag-已結未取 { background: #d3f9d8; color: #2b8a3e; }
+        /* 標題與清單 */
+        .section-title { margin: 25px 0 10px 0; padding: 10px; border-radius: 8px; font-weight: bold; display: flex; align-items: center; }
+        .title-arrived { background-color: #e6f4ea; color: var(--arrived-green); border-left: 5px solid var(--arrived-green); }
+        .title-not-arrived { background-color: #f1f3f4; color: var(--pending-gray); border-left: 5px solid var(--pending-gray); }
 
-        .item-header { display: flex; justify-content: space-between; font-weight: bold; font-size: 1.1em; }
-        .item-info { color: #666; font-size: 0.9em; margin-top: 4px; }
-        .price-tag { color: var(--accent-color); font-weight: bold; font-size: 1.1em; }
-        .note-box { margin-top: 8px; padding-top: 8px; border-top: 1px dashed #eee; color: #0066cc; font-size: 0.9em; font-style: italic; }
+        .card { background: white; padding: 15px; margin-bottom: 10px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); position: relative; }
+        .arrived-card { border-left: 5px solid var(--arrived-green); }
+        .not-arrived-card { border-left: 5px solid var(--pending-gray); opacity: 0.85; }
 
-        /* 總計區 */
-        .summary-box { background: #2c3e50; color: white; padding: 20px; border-radius: 15px; margin-top: 25px; }
-        .summary-row { display: flex; justify-content: space-between; margin-bottom: 10px; border-bottom: 1px solid #455a64; padding-bottom: 8px; }
-        .total-amount { font-size: 1.6em; color: #f1c40f; font-weight: bold; }
-        .no-data { text-align: center; padding: 50px; color: #999; }
+        .status-tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.8em; font-weight: bold; margin-bottom: 5px; }
+        .tag-green { background: #d3f9d8; color: #2b8a3e; }
+        .tag-gray { background: #f1f3f4; color: #5f6368; }
+
+        .item-header { display: flex; justify-content: space-between; font-weight: bold; }
+        .price-text { color: #d93025; }
+        .item-info { color: #666; font-size: 0.9em; margin-top: 5px; }
+        .note-text { margin-top: 8px; color: #1a73e8; font-size: 0.85em; border-top: 1px dashed #eee; padding-top: 5px; }
+        .empty-msg { text-align: center; padding: 20px; color: #999; background: #fff; border-radius: 10px; border: 1px dashed #ddd; margin: 10px 0; }
+
+        /* 總結區 */
+        .summary-box { background: #2d3436; color: white; padding: 20px; border-radius: 15px; margin-top: 30px; }
+        .summary-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #444; }
+        .summary-row:last-of-type { border-bottom: none; }
+        .sum-label { font-size: 0.9em; color: #ccc; }
+        .sum-val { font-weight: bold; text-align: right; }
+        .highlight-green { color: #51cf66; }
+        .highlight-gold { color: #fcc419; font-size: 1.3em; }
     </style>
 </head>
 <body>
@@ -99,94 +104,98 @@
 
     async function performSearch() {
         const idInput = document.getElementById('idInput').value.trim().toLowerCase();
-        const resultArea = document.getElementById('resultArea');
-        if (!idInput) { alert('請輸入 ID！'); return; }
-
-        resultArea.innerHTML = '<div style="text-align:center; padding:20px;">讀取中...</div>';
+        if (!idInput) return alert('請輸入 ID');
+        document.getElementById('resultArea').innerHTML = '<div style="text-align:center; padding:30px;">🔍 正在查詢雲端資料...</div>';
 
         try {
             const res = await fetch(csvUrl);
             const text = await res.text();
-            const data = parseCSV(text);
+            const allData = parseCSV(text);
 
-            // 篩選邏輯
-            const results = data.filter((row, index) => {
-                if (index === 0) return false;
+            const filtered = allData.filter((row, idx) => {
+                if (idx === 0) return false;
                 const status = row[1] || "";
-                const group = row[2] || "";
-                const socialID = (row[3] || "").toLowerCase();
-                
-                // 排除已取貨/已領取的資料，只顯示未完成狀態
-                const isPending = ["未到貨", "未取貨", "已取未付", "已結未取"].includes(status);
-                
-                return group === currentGroup && socialID.includes(idInput) && isPending;
+                return row[2] === currentGroup && (row[3] || "").toLowerCase().includes(idInput) && status !== "已取貨";
             });
 
-            renderResults(results, idInput);
-        } catch (err) {
-            resultArea.innerHTML = '<div class="no-data">讀取失敗，請確認網路連線。</div>';
-        }
+            renderUI(filtered);
+        } catch (e) { document.getElementById('resultArea').innerHTML = '讀取失敗'; }
     }
 
-    function renderResults(items, query) {
-        const resultArea = document.getElementById('resultArea');
+    function renderUI(items) {
+        const area = document.getElementById('resultArea');
         if (items.length === 0) {
-            resultArea.innerHTML = `<div class="no-data">查無【${currentGroup}】的待處理紀錄。</div>`;
+            area.innerHTML = '<div class="empty-msg">查無待領取紀錄</div>';
             return;
         }
 
-        let html = `<div style="margin-bottom:10px; font-weight:bold; color:#1a73e8;">📍 查詢結果：${items[0][3]}</div>`;
-        let totalSum = 0;
+        // 分類資料
+        const arrivedList = items.filter(r => ["未取貨", "已取未付", "已結未取"].includes(r[1]));
+        const notArrivedList = items.filter(r => r[1] === "未到貨");
 
-        items.forEach(item => {
-            const status = item[1];
-            const itemName = item[4];
-            const price = item[5];
-            const qty = item[6];
-            const subtotal = parseInt((item[7] || "0").replace(/[^0-9]/g, '')) || 0;
-            const note = item[8] || ""; // I 欄位：備註
+        let html = `<div style="font-weight:bold; color:#1a73e8; margin-bottom:10px;">📍 查詢結果：${items[0][3]}</div>`;
 
-            totalSum += subtotal;
+        // 區塊1: 已到貨 (綠色)
+        html += `<div class="section-title title-arrived">✅ 已到貨商品 (現貨待領)</div>`;
+        if (arrivedList.length === 0) {
+            html += `<div class="empty-msg">目前沒有已到貨商品</div>`;
+        } else {
+            arrivedList.forEach(r => html += createCard(r, 'arrived'));
+        }
 
-            html += `
-                <div class="card" style="border-left-color: ${getStatusColor(status)}">
-                    <div class="status-tag tag-${status}">${status}</div>
-                    <div class="item-header">
-                        <span>${itemName}</span>
-                        <span class="price-tag">$${subtotal.toLocaleString()}</span>
-                    </div>
-                    <div class="item-info">單價: $${price} | 數量: ${qty}</div>
-                    ${note ? `<div class="note-box">📝 備註: ${note}</div>` : ''}
-                </div>
-            `;
-        });
+        // 區塊2: 未到貨 (灰色)
+        html += `<div class="section-title title-not-arrived">⏳ 未到貨商品 (預購中)</div>`;
+        if (notArrivedList.length === 0) {
+            html += `<div class="empty-msg">目前沒有未到貨商品</div>`;
+        } else {
+            notArrivedList.forEach(r => html += createCard(r, 'not-arrived'));
+        }
+
+        // 底部總結
+        const stats = {
+            aItems: arrivedList.length,
+            aQty: arrivedList.reduce((s, r) => s + (parseInt(r[6]) || 0), 0),
+            aTotal: arrivedList.reduce((s, r) => s + (parseInt(r[7].replace(/[^0-9]/g, '')) || 0), 0),
+            nItems: notArrivedList.length,
+            nQty: notArrivedList.reduce((s, r) => s + (parseInt(r[6]) || 0), 0),
+            nTotal: notArrivedList.reduce((s, r) => s + (parseInt(r[7].replace(/[^0-9]/g, '')) || 0), 0)
+        };
 
         html += `
             <div class="summary-box">
-                <div class="summary-row"><span>待處理品項</span><span>${items.length} 筆</span></div>
-                <div class="summary-row" style="border:none;">
-                    <span style="font-size:1.1em;">應付金額總計</span>
-                    <span class="total-amount">$${totalSum.toLocaleString()}</span>
+                <div class="summary-row">
+                    <div class="sum-label">已到貨總計<br>(${stats.aItems}品項 / ${stats.aQty}件)</div>
+                    <div class="sum-val highlight-green">$${stats.aTotal.toLocaleString()}</div>
                 </div>
-                <div style="text-align:center; font-size:0.8em; color:#bdc3c7; margin-top:10px;">
-                    💡 狀態說明：[已取未付] 請補款、[已結未取] 記得帶走喔！
+                <div class="summary-row">
+                    <div class="sum-label">未到貨總計<br>(${stats.nItems}品項 / ${stats.nQty}件)</div>
+                    <div class="sum-val">$${stats.nTotal.toLocaleString()}</div>
+                </div>
+                <div class="summary-row" style="border:none; margin-top:10px;">
+                    <div class="sum-label" style="color:white; font-size:1em;">應付金額總額</div>
+                    <div class="sum-val highlight-gold">$${(stats.aTotal + stats.nTotal).toLocaleString()}</div>
                 </div>
             </div>
         `;
-        resultArea.innerHTML = html;
+
+        area.innerHTML = html;
     }
 
-    function getStatusColor(s) {
-        switch(s) {
-            case "已取未付": return "#e03131";
-            case "未到貨": return "#f08c00";
-            case "未取貨": return "#e67700";
-            case "已結未取": return "#2b8a3e";
-            default: return "#ccc";
-        }
+    function createCard(row, type) {
+        const isArrived = type === 'arrived';
+        const subtotal = (row[7] || "0").replace(/[^0-9]/g, '');
+        return `
+            <div class="card ${isArrived ? 'arrived-card' : 'not-arrived-card'}">
+                <div class="status-tag ${isArrived ? 'tag-green' : 'tag-gray'}">${row[1]}</div>
+                <div class="item-header">
+                    <span>${row[4]}</span>
+                    <span class="price-text">$${parseInt(subtotal).toLocaleString()}</span>
+                </div>
+                <div class="item-info">單價: $${row[5]} | 數量: ${row[6]}</div>
+                ${row[8] ? `<div class="note-text">📝 備註: ${row[8]}</div>` : ''}
+            </div>
+        `;
     }
 </script>
-
 </body>
 </html>
-
