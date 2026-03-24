@@ -69,10 +69,9 @@
     let currentGroup = '一群';
     let allData = [];
 
-    // 定義「已結清」狀態
-    const PAID_STATUS = ["已結未取", "已釋出", "已結寄黑貓", "已結寄 7-11", "已結未到"];
+    // 定義已結清且不計費狀態（排除已釋出）
+    const PAID_STATUS = ["已結未取", "已結寄黑貓", "已結寄 7-11", "已結未到"];
 
-    // 金額解析函數：處理逗號與錢字號
     function parseAmount(val) {
         if (!val) return 0;
         let cleaned = val.toString().replace(/[$,]/g, '');
@@ -103,7 +102,7 @@
                 parts.push(current.trim());
                 return parts;
             });
-        } catch (e) { alert("資料讀取失敗，請確認網路連線"); }
+        } catch (e) { alert("資料讀取失敗"); }
     }
 
     async function handleSearchClick() {
@@ -112,7 +111,15 @@
         if (allData.length === 0) await fetchData();
 
         const matchedIds = [...new Set(allData
-            .filter((row, idx) => idx > 0 && row[2] === currentGroup && (row[3]||"").toLowerCase().includes(query) && row[1] !== "已取貨")
+            .filter((row, idx) => {
+                if (idx === 0) return false;
+                const status = row[1] || "";
+                // 排除已取貨與已釋出
+                return row[2] === currentGroup && 
+                       (row[3]||"").toLowerCase().includes(query) && 
+                       status !== "已取貨" && 
+                       status !== "已釋出";
+            })
             .map(row => row[3])
         )];
 
@@ -132,9 +139,10 @@
 
     function showFinalResults(targetId) {
         document.getElementById('candidateArea').style.display = 'none';
-        const items = allData.filter(row => row[2] === currentGroup && row[3] === targetId && row[1] !== "已取貨");
+        // 篩選時再次確保排除已釋出
+        const items = allData.filter(row => row[2] === currentGroup && row[3] === targetId && row[1] !== "已取貨" && row[1] !== "已釋出");
         
-        const arrivedList = items.filter(r => ["未取貨", "已取未付", "已結未取", "已釋出", "已結寄黑貓", "已結寄 7-11"].includes(r[1]));
+        const arrivedList = items.filter(r => ["未取貨", "已取未付", "已結未取", "已結寄黑貓", "已結寄 7-11"].includes(r[1]));
         const notArrivedList = items.filter(r => ["未到貨", "已結未到"].includes(r[1]));
 
         let html = `<div class="result-id-display">📍 查詢 ID：${targetId}</div>`;
@@ -146,11 +154,11 @@
         html += notArrivedList.length === 0 ? `<div style="text-align:center; padding:20px; color:#999; background:white; border-radius:12px; border:2px dashed #dee2e6;">目前沒有未到貨商品</div>` : notArrivedList.map(r => createCard(r, 'not-arrived')).join('');
 
         const calc = (list) => {
-            const filtered = list.filter(r => !PAID_STATUS.includes(r[1]));
+            const billable = list.filter(r => !PAID_STATUS.includes(r[1]));
             return {
                 items: list.length,
                 qty: list.reduce((s, r) => s + (parseInt(r[6]) || 0), 0),
-                total: filtered.reduce((s, r) => s + parseAmount(r[7]), 0)
+                total: billable.reduce((s, r) => s + parseAmount(r[7]), 0)
             };
         };
 
@@ -179,14 +187,12 @@
     function createCard(row, type) {
         const status = row[1];
         const isPaid = PAID_STATUS.includes(status);
-        const amount = parseAmount(row[7]);
-        
         return `
             <div class="card ${type === 'arrived' ? 'arrived-card' : 'not-arrived-card'}">
                 <div class="status-tag ${type === 'arrived' ? 'tag-green' : 'tag-gray'}">${status}</div>
                 <div class="item-header">
                     <span>${row[4] || "未知商品"}</span>
-                    <span class="${isPaid ? 'paid-text' : 'price-text'}">${isPaid ? '已結清' : '$' + amount.toLocaleString()}</span>
+                    <span class="${isPaid ? 'paid-text' : 'price-text'}">${isPaid ? '已結清' : '$' + parseAmount(row[7]).toLocaleString()}</span>
                 </div>
                 <div class="item-info">單價: $${row[5]} | 數量: ${row[6]}</div>
                 ${row[8] ? `<div class="note-text">📝 備註: ${row[8]}</div>` : ''}
