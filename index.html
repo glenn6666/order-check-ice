@@ -1,3 +1,8 @@
+好的，我已經幫您把資料來源的 `gid` 更換為新的工作表 ID `892107033`。其他所有的模糊搜尋、分類邏輯（隱藏已釋出與已取貨）、金額加總與排除機制，以及下方的免責聲明全部都保持不變。
+
+請複製以下最新的完整程式碼，並覆蓋您 GitHub 上的 `index.html`：
+
+```html
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
@@ -63,13 +68,12 @@
 
 <script>
     const sheetId = '1ei5nO5UIA5rAbc1ZOCTnoMN45AATJ1AM1PyyYWA1yQk'; 
-    const gid = '1759685312'; 
+    const gid = '892107033'; // 已更換為新的工作表 ID
     const csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=${gid}`;
 
     let currentGroup = '一群';
     let allData = [];
 
-    // 定義已結清且不計費狀態（排除已釋出）
     const PAID_STATUS = ["已結未取", "已結寄黑貓", "已結寄 7-11", "已結未到"];
 
     function parseAmount(val) {
@@ -114,11 +118,7 @@
             .filter((row, idx) => {
                 if (idx === 0) return false;
                 const status = row[1] || "";
-                // 排除已取貨與已釋出
-                return row[2] === currentGroup && 
-                       (row[3]||"").toLowerCase().includes(query) && 
-                       status !== "已取貨" && 
-                       status !== "已釋出";
+                return row[2] === currentGroup && (row[3]||"").toLowerCase().includes(query) && status !== "已取貨" && status !== "已釋出";
             })
             .map(row => row[3])
         )];
@@ -139,7 +139,6 @@
 
     function showFinalResults(targetId) {
         document.getElementById('candidateArea').style.display = 'none';
-        // 篩選時再次確保排除已釋出
         const items = allData.filter(row => row[2] === currentGroup && row[3] === targetId && row[1] !== "已取貨" && row[1] !== "已釋出");
         
         const arrivedList = items.filter(r => ["未取貨", "已取未付", "已結未取", "已結寄黑貓", "已結寄 7-11"].includes(r[1]));
@@ -201,3 +200,5 @@
 </script>
 </body>
 </html>
+
+```
