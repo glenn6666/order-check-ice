@@ -63,9 +63,7 @@
 
 <script>
     const sheetId = '1ei5nO5UIA5rAbc1ZOCTnoMN45AATJ1AM1PyyYWA1yQk'; 
-    // 現貨與其他狀態分頁
     const gidArrived = '1759685312'; 
-    // 未到貨專屬分頁
     const gidNotArrived = '892107033'; 
     
     const csvUrlArrived = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=${gidArrived}`;
@@ -91,24 +89,37 @@
         document.getElementById('resultArea').innerHTML = '';
     }
 
+    // 優化後的 CSV 快速解析演算法
     function parseCSVText(text) {
-        return text.split(/\r?\n/).map(line => {
+        const lines = text.split(/\r?\n/);
+        const result = [];
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i];
+            if (!line) continue;
             const parts = [];
             let current = '';
             let inQuotes = false;
-            for (let i = 0; i < line.length; i++) {
-                if (line[i] === '"') inQuotes = !inQuotes;
-                else if (line[i] === ',' && !inQuotes) { parts.push(current.trim()); current = ''; }
-                else current += line[i];
+            for (let j = 0; j < line.length; j++) {
+                const char = line[j];
+                if (char === '"') {
+                    inQuotes = !inQuotes;
+                } else if (char === ',' && !inQuotes) {
+                    parts.push(current.trim());
+                    current = '';
+                } else {
+                    current += char;
+                }
             }
             parts.push(current.trim());
-            return parts;
-        });
+            result.push(parts);
+        }
+        return result;
     }
 
-    async function fetchAllData() {
+    // 網頁一打開自動在背景下載並解析（只做一次）
+    async function initDataLoader() {
         try {
-            document.getElementById('resultArea').innerHTML = '<div style="text-align:center; padding:20px; color:#666;">⏳ 正在連線讀取最新資料中...</div>';
+            document.getElementById('resultArea').innerHTML = '<div style="text-align:center; padding:20px; color:#666;">⏳ 正在即時同步雲端資料庫...</div>';
             const [resArrived, resNotArrived] = await Promise.all([
                 fetch(csvUrlArrived).then(r => r.text()),
                 fetch(csvUrlNotArrived).then(r => r.text())
@@ -116,25 +127,28 @@
             dataArrived = parseCSVText(resArrived);
             dataNotArrived = parseCSVText(resNotArrived);
             isDataLoaded = true;
-            document.getElementById('resultArea').innerHTML = '';
+            document.getElementById('resultArea').innerHTML = '<div style="text-align:center; padding:10px; color:#2d8a4e; font-size:0.9em; font-weight:bold;">✅ 雲端資料同步完畢，請輸入關鍵字查詢</div>';
         } catch (e) { 
-            alert("資料讀取失敗，請確認試算表是否有正常開啟權限。"); 
+            document.getElementById('resultArea').innerHTML = '<div style="text-align:center; padding:20px; color:#d93025; font-weight:bold;">❌ 資料同步失敗，請確認網路或試算表權限！</div>';
         }
     }
 
     async function handleSearchClick() {
+        if (!isDataLoaded) {
+            alert('資料仍在同步中，請稍候再試！');
+            return;
+        }
+        
         const query = document.getElementById('idInput').value.trim().toLowerCase();
         if (!query) return alert('請輸入關鍵字！');
-        if (!isDataLoaded) await fetchAllData();
 
-        // 排除已取貨與已釋出
         const filterRule = (row, idx) => {
-            if (idx === 0) return false;
+            if (idx === 0 || !row[3]) return false;
             const status = row[1] || "";
-            return row[2] === currentGroup && (row[3]||"").toLowerCase().includes(query) && status !== "已取貨" && status !== "已釋出";
+            return row[2] === currentGroup && row[3].toLowerCase().includes(query) && status !== "已取貨" && status !== "已釋出";
         };
 
-        // 從兩個分頁中撈出所有相符的客戶 ID 並去重複
+        // 超快速記憶體篩選
         const idsArrived = dataArrived.filter(filterRule).map(row => row[3]);
         const idsNotArrived = dataNotArrived.filter(filterRule).map(row => row[3]);
         const matchedIds = [...new Set([...idsArrived, ...idsNotArrived])];
@@ -142,39 +156,34 @@
         const candidateArea = document.getElementById('candidateArea');
         if (matchedIds.length === 0) {
             candidateArea.style.display = 'none';
-            document.getElementById('resultArea').innerHTML = '<div style="text-align:center; padding:30px; color:#999; background:white; border-radius:12px;">🔍 找不到相符的客戶訂單。</div>';
+            document.getElementById('resultArea').innerHTML = '<div class="empty-msg">🔍 在目前的群組中找不到您的待領取紀錄。</div>';
         } else if (matchedIds.length === 1) {
             candidateArea.style.display = 'none';
             showFinalResults(matchedIds[0]);
         } else {
             candidateArea.style.display = 'flex';
             candidateArea.innerHTML = matchedIds.map(id => `<button class="candidate-btn" onclick="showFinalResults('${id.replace(/'/g, "\\'")}')">${id}</button>`).join('');
-            document.getElementById('resultArea').innerHTML = '<div style="text-align:center; padding:10px; color:#666;">請點選下方正確的 ID：</div>';
+            document.getElementById('resultArea').innerHTML = '<div style="text-align:center; padding:10px; color:#666;">找到多個相符 ID，請點選：</div>';
         }
     }
 
     function showFinalResults(targetId) {
         document.getElementById('candidateArea').style.display = 'none';
         
-        // 分別從對應的分頁提取該客戶資料，並過濾掉已取貨、已釋出
         const arrivedItems = dataArrived.filter(row => row[2] === currentGroup && row[3] === targetId && row[1] !== "已取貨" && row[1] !== "已釋出");
         const notArrivedItems = dataNotArrived.filter(row => row[2] === currentGroup && row[3] === targetId && row[1] !== "已取貨" && row[1] !== "已釋出");
         
-        // 依照狀態安全分流
-        const arrivedList = arrivedItems.filter(r => ["未取貨", "開取未付", "已取未付", "已結未取", "已結寄黑貓", "已結寄 7-11"].includes(r[1]));
+        const arrivedList = arrivedItems.filter(r => ["未取貨", "已取未付", "已結未取", "已結寄黑貓", "已結寄 7-11"].includes(r[1]));
         const notArrivedList = notArrivedItems.filter(r => ["未到貨", "已結未到"].includes(r[1]));
 
         let html = `<div class="result-id-display">📍 查詢 ID：${targetId}</div>`;
 
-        // 渲染已到貨區塊（綠色）
-        html += `<div class="section-title title-arrived">✅ 已到貨商品 (待處理)</div>`;
-        html += arrivedList.length === 0 ? `<div style="text-align:center; padding:20px; color:#999; background:white; border-radius:12px; border:2px dashed #dee2e6;">目前沒有已到貨商品</div>` : arrivedList.map(r => createCard(r, 'arrived')).join('');
+        html += `<div class="section-title title-arrived">📦 已到貨商品 (請儘速領取)</div>`;
+        html += arrivedList.length === 0 ? `<div class="empty-msg">目前沒有已到貨商品</div>` : arrivedList.map(r => createCard(r, 'arrived')).join('');
 
-        // 渲染未到貨區塊（灰色）
-        html += `<div class="section-title title-not-arrived">⏳ 未到貨商品 (預購中)</div>`;
-        html += notArrivedList.length === 0 ? `<div style="text-align:center; padding:20px; color:#999; background:white; border-radius:12px; border:2px dashed #dee2e6;">目前沒有未到貨商品</div>` : notArrivedList.map(r => createCard(r, 'not-arrived')).join('');
+        html += `<div class="section-title title-not-arrived">🗓️ 未到貨商品 (預購中)</div>`;
+        html += notArrivedList.length === 0 ? `<div class="empty-msg">目前沒有未到貨商品</div>` : notArrivedList.map(r => createCard(r, 'not-arrived')).join('');
 
-        // 統計計算邏輯
         const calc = (list) => {
             const billable = list.filter(r => !PAID_STATUS.includes(r[1]));
             return {
@@ -220,6 +229,9 @@
                 ${row[8] ? `<div class="note-text">📝 備註: ${row[8]}</div>` : ''}
             </div>`;
     }
+
+    // 初始化載入
+    window.onload = initDataLoader;
 </script>
 </body>
 </html>
