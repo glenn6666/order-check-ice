@@ -72,6 +72,7 @@
     let dataArrived = [];
     let dataNotArrived = [];
     let isDataLoaded = false;
+    let currentGroup = '一群';
 
     const PAID_STATUS = ["已結未取", "已結寄黑貓", "已結寄 7-11", "已結未到"];
 
@@ -89,13 +90,12 @@
         document.getElementById('resultArea').innerHTML = '';
     }
 
-    // 優化後的 CSV 快速解析演算法
     function parseCSVText(text) {
         const lines = text.split(/\r?\n/);
         const result = [];
         for (let i = 0; i < lines.length; i++) {
             const line = lines[i];
-            if (!line) continue;
+            if (!line.trim()) continue;
             const parts = [];
             let current = '';
             let inQuotes = false;
@@ -116,7 +116,6 @@
         return result;
     }
 
-    // 網頁一打開自動在背景下載並解析（只做一次）
     async function initDataLoader() {
         try {
             document.getElementById('resultArea').innerHTML = '<div style="text-align:center; padding:20px; color:#666;">⏳ 正在即時同步雲端資料庫...</div>';
@@ -142,13 +141,15 @@
         const query = document.getElementById('idInput').value.trim().toLowerCase();
         if (!query) return alert('請輸入關鍵字！');
 
+        // 安全防錯篩選規則
         const filterRule = (row, idx) => {
-            if (idx === 0 || !row[3]) return false;
+            if (idx === 0 || !row || row.length < 4) return false;
             const status = row[1] || "";
-            return row[2] === currentGroup && row[3].toLowerCase().includes(query) && status !== "已取貨" && status !== "已釋出";
+            const group = row[2] || "";
+            const socialID = row[3] || "";
+            return group === currentGroup && socialID.toLowerCase().includes(query) && status !== "已取貨" && status !== "已釋出";
         };
 
-        // 超快速記憶體篩選
         const idsArrived = dataArrived.filter(filterRule).map(row => row[3]);
         const idsNotArrived = dataNotArrived.filter(filterRule).map(row => row[3]);
         const matchedIds = [...new Set([...idsArrived, ...idsNotArrived])];
@@ -156,7 +157,7 @@
         const candidateArea = document.getElementById('candidateArea');
         if (matchedIds.length === 0) {
             candidateArea.style.display = 'none';
-            document.getElementById('resultArea').innerHTML = '<div class="empty-msg">🔍 在目前的群組中找不到您的待領取紀錄。</div>';
+            document.getElementById('resultArea').innerHTML = '<div style="text-align:center; padding:30px; color:#999; background:white; border-radius:12px;">🔍 在目前的群組中找不到您的待領取紀錄。</div>';
         } else if (matchedIds.length === 1) {
             candidateArea.style.display = 'none';
             showFinalResults(matchedIds[0]);
@@ -170,19 +171,19 @@
     function showFinalResults(targetId) {
         document.getElementById('candidateArea').style.display = 'none';
         
-        const arrivedItems = dataArrived.filter(row => row[2] === currentGroup && row[3] === targetId && row[1] !== "已取貨" && row[1] !== "已釋出");
-        const notArrivedItems = dataNotArrived.filter(row => row[2] === currentGroup && row[3] === targetId && row[1] !== "已取貨" && row[1] !== "已釋出");
+        const arrivedItems = dataArrived.filter(row => row && row.length > 3 && row[2] === currentGroup && row[3] === targetId && row[1] !== "已取貨" && row[1] !== "已釋出");
+        const notArrivedItems = dataNotArrived.filter(row => row && row.length > 3 && row[2] === currentGroup && row[3] === targetId && row[1] !== "已取貨" && row[1] !== "已釋出");
         
         const arrivedList = arrivedItems.filter(r => ["未取貨", "已取未付", "已結未取", "已結寄黑貓", "已結寄 7-11"].includes(r[1]));
         const notArrivedList = notArrivedItems.filter(r => ["未到貨", "已結未到"].includes(r[1]));
 
         let html = `<div class="result-id-display">📍 查詢 ID：${targetId}</div>`;
 
-        html += `<div class="section-title title-arrived">📦 已到貨商品 (請儘速領取)</div>`;
-        html += arrivedList.length === 0 ? `<div class="empty-msg">目前沒有已到貨商品</div>` : arrivedList.map(r => createCard(r, 'arrived')).join('');
+        html += `<div class="section-title title-arrived">📦 已到貨商品</div>`;
+        html += arrivedList.length === 0 ? `<div style="text-align:center; padding:20px; color:#999; background:white; border-radius:12px; border:2px dashed #dee2e6;">目前沒有已到貨商品</div>` : arrivedList.map(r => createCard(r, 'arrived')).join('');
 
-        html += `<div class="section-title title-not-arrived">🗓️ 未到貨商品 (預購中)</div>`;
-        html += notArrivedList.length === 0 ? `<div class="empty-msg">目前沒有未到貨商品</div>` : notArrivedList.map(r => createCard(r, 'not-arrived')).join('');
+        html += `<div class="section-title title-not-arrived">🗓️ 未到貨商品</div>`;
+        html += notArrivedList.length === 0 ? `<div style="text-align:center; padding:20px; color:#999; background:white; border-radius:12px; border:2px dashed #dee2e6;">目前沒有未到貨商品</div>` : notArrivedList.map(r => createCard(r, 'not-arrived')).join('');
 
         const calc = (list) => {
             const billable = list.filter(r => !PAID_STATUS.includes(r[1]));
@@ -225,12 +226,11 @@
                     <span>${row[4] || "未知商品"}</span>
                     <span class="${isPaid ? 'paid-text' : 'price-text'}">${isPaid ? '已結清' : '$' + parseAmount(row[7]).toLocaleString()}</span>
                 </div>
-                <div class="item-info">單價: $${row[5]} | 數量: ${row[6]}</div>
+                <div class="item-info">單價: $${row[5] || 0} | 數量: ${row[6] || 0}</div>
                 ${row[8] ? `<div class="note-text">📝 備註: ${row[8]}</div>` : ''}
             </div>`;
     }
 
-    // 初始化載入
     window.onload = initDataLoader;
 </script>
 </body>
