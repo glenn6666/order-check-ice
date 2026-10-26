@@ -208,7 +208,7 @@
             showFinalResults(matchedIds[0]);
         } else {
             candidateArea.style.display = 'flex';
-            candidateArea.innerHTML = matchedIds.map(id => `<button class="candidate-btn" onclick="showFinalResults('${id.replace(/'/g, "\\'")}')">${id}</button>`).join('');
+            candidateArea.innerHTML = matchedIds.map(id => `<button type="button" class="candidate-btn" data-id="${escapeHtml(id)}">${escapeHtml(id)}</button>`).join('');
             document.getElementById('resultArea').innerHTML = '<div style="text-align:center; padding:10px; color:#666;">找到多個相符 ID，請點選：</div>';
         }
     }
@@ -223,7 +223,7 @@
         const arrivedList = arrivedItems.filter(r => ["未取貨", "已取未付", "已結未取", "已結寄黑貓", "已結寄7-11"].includes(r[1]));
         const notArrivedList = notArrivedItems.filter(r => ["未到貨", "已結未到"].includes(r[1]));
 
-        let html = `<div class="result-id-display">📍 查詢 ID：${targetId}</div>`;
+        let html = `<div class="result-id-display">📍 查詢 ID：${escapeHtml(targetId)}</div>`;
 
         html += `<div class="section-title title-arrived">📦 已到貨商品</div>`;
         html += arrivedList.length === 0 ? `<div style="text-align:center; padding:20px; color:#999; background:white; border-radius:12px; border:2px dashed #dee2e6;">目前沒有已到貨商品</div>` : arrivedList.map(r => createCard(r, 'arrived')).join('');
@@ -295,13 +295,13 @@
         const isPaid = PAID_STATUS.includes(status);
         return `
             <div class="card ${type === 'arrived' ? 'arrived-card' : 'not-arrived-card'}">
-                <div class="status-tag ${type === 'arrived' ? 'tag-green' : 'tag-gray'}">${status}</div>
+                <div class="status-tag ${type === 'arrived' ? 'tag-green' : 'tag-gray'}">${escapeHtml(status)}</div>
                 <div class="item-header">
-                    <span>${row[4] || "未知商品"}</span>
+                    <span>${escapeHtml(row[4] || "未知商品")}</span>
                     <span class="${isPaid ? 'paid-text' : 'price-text'}">${isPaid ? '已結清' : '$' + parseAmount(row[7]).toLocaleString()}</span>
                 </div>
-                <div class="item-info">單價: $${row[5] || 0} | 數量: ${row[6] || 0}</div>
-                ${row[8] ? `<div class="note-text">📝 備註: ${row[8]}</div>` : ''}
+                <div class="item-info">單價: $${escapeHtml(row[5] || 0)} | 數量: ${escapeHtml(row[6] || 0)}</div>
+                ${row[8] ? `<div class="note-text">📝 備註: ${escapeHtml(row[8])}</div>` : ''}
             </div>`;
     }
 
@@ -334,6 +334,11 @@
             container.innerHTML = "<div style='color:red; padding:10px;'>圖片產生失敗，請再試一次。</div>";
         }
     }
+
+    document.addEventListener('click', e => {
+        const btn = e.target.closest('.candidate-btn');
+        if (btn && btn.dataset.id !== undefined) showFinalResults(btn.dataset.id);
+    });
 
     window.onload = initDataLoader;
 </script>
