@@ -69,12 +69,17 @@
     const csvUrlArrived = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=${gidArrived}`;
     const csvUrlNotArrived = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=${gidNotArrived}`;
 
+    // 取貨狀態（B 欄）去掉所有空白，避免「已結寄 7-11」「 已取貨」這類多打或少打空格就查不到
+    function normalizeStatus(rows) {
+        rows.forEach(r => { if (r && typeof r[1] === "string") r[1] = r[1].replace(/\s+/g, ""); });
+        return rows;
+    }
     let dataArrived = [];
     let dataNotArrived = [];
     let isDataLoaded = false;
     let currentGroup = '一群';
 
-    const PAID_STATUS = ["已結未取", "已結寄黑貓", "已結寄 7-11", "已結未到"];
+    const PAID_STATUS = ["已結未取", "已結寄黑貓", "已結寄7-11", "已結未到"];
 
     function parseAmount(val) {
         if (!val) return 0;
@@ -123,8 +128,8 @@
                 fetch(csvUrlArrived).then(r => r.text()),
                 fetch(csvUrlNotArrived).then(r => r.text())
             ]);
-            dataArrived = parseCSVText(resArrived);
-            dataNotArrived = parseCSVText(resNotArrived);
+            dataArrived = normalizeStatus(parseCSVText(resArrived));
+            dataNotArrived = normalizeStatus(parseCSVText(resNotArrived));
             isDataLoaded = true;
             document.getElementById('resultArea').innerHTML = '<div style="text-align:center; padding:10px; color:#2d8a4e; font-size:0.9em; font-weight:bold;">✅ 雲端資料同步完畢，請輸入關鍵字查詢</div>';
         } catch (e) { 
@@ -174,7 +179,7 @@
         const arrivedItems = dataArrived.filter(row => row && row.length > 3 && row[2] === currentGroup && row[3] === targetId && row[1] !== "已取貨" && row[1] !== "已釋出");
         const notArrivedItems = dataNotArrived.filter(row => row && row.length > 3 && row[2] === currentGroup && row[3] === targetId && row[1] !== "已取貨" && row[1] !== "已釋出");
         
-        const arrivedList = arrivedItems.filter(r => ["未取貨", "已取未付", "已結未取", "已結寄黑貓", "已結寄 7-11"].includes(r[1]));
+        const arrivedList = arrivedItems.filter(r => ["未取貨", "已取未付", "已結未取", "已結寄黑貓", "已結寄7-11"].includes(r[1]));
         const notArrivedList = notArrivedItems.filter(r => ["未到貨", "已結未到"].includes(r[1]));
 
         let html = `<div class="result-id-display">📍 查詢 ID：${targetId}</div>`;
