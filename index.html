@@ -4,6 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>北冰洋水產訂單查詢系統</title>
+    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&display=swap" rel="stylesheet">
     <style>
         :root { --primary-color: #0077b6; --arrived-green: #2d8a4e; --pending-gray: #6c757d; --gold-color: #ffd43b; --paid-color: #94a3b8; }
         body { font-family: "Microsoft JhengHei", sans-serif; padding: 15px; max-width: 800px; margin: auto; background-color: #f0f4f8; color: #333; }
@@ -37,6 +41,14 @@
         .highlight-gold { color: var(--gold-color); font-size: 1.5em; font-weight: bold; } 
         .normal-white { color: #ffffff; font-size: 1.5em; font-weight: bold; }
         .warning-footer { text-align: center; margin-top: 30px; padding: 15px; background-color: #fff3e0; color: #e67e22; border-radius: 10px; font-size: 0.95em; font-weight: bold; border: 1px solid #ffe0b2; }
+        .print-btn { width: 100%; margin: 20px 0; padding: 15px; background-color: #37474f; color: white; border: none; border-radius: 10px; font-size: 1.1em; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .print-btn:active { background-color: #263238; }
+        /* 🖼️ 純白底黑字 Noto Sans TC 大字對帳圖生成區 */
+        #captureArea { position: absolute; top: 0; left: 0; margin-top: -99999px; width: 500px; background: #ffffff; color: #000000; padding: 30px 25px; font-family: "Noto Sans TC", "Microsoft JhengHei", sans-serif; }
+        .img-item-row { border-bottom: 3px dashed #000000; padding: 20px 0; }
+        .img-item-row:last-of-type { border-bottom: 4px solid #000000; }
+        #imageOutput { text-align: center; margin-top: 20px; border: 2px dashed #b0bec5; padding: 15px; background: #fff; display: none; border-radius: 12px; }
+        #imageOutput img { width: 100%; max-width: 500px; border: 1px solid #000; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
     </style>
 </head>
 <body>
@@ -56,6 +68,13 @@
 </div>
 
 <div id="resultArea"></div>
+
+<div id="imageOutput">
+    <div style="color:#d32f2f; font-weight:bold; margin-bottom:12px; font-size: 1.05em;">▼ 下方圖片已生成，請長按儲存或分享 ▼</div>
+    <div id="imageContainer"></div>
+</div>
+
+<div id="captureArea"></div>
 
 <div class="warning-footer">
     ⚠️ 系統偶有出錯的可能，若有問題請直接詢問版面小編
@@ -87,7 +106,27 @@
         return parseFloat(cleaned) || 0;
     }
 
+    function escapeHtml(str) {
+        return String(str == null ? '' : str)
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+
+    function nowTaipeiText() {
+        const p = new Date(Date.now() + 8 * 60 * 60 * 1000);
+        const z = n => String(n).padStart(2, '0');
+        return `${p.getUTCFullYear()}/${z(p.getUTCMonth() + 1)}/${z(p.getUTCDate())} ${z(p.getUTCHours())}:${z(p.getUTCMinutes())}`;
+    }
+
+    function hideImageOutput() {
+        const o = document.getElementById('imageOutput');
+        if (o) o.style.display = 'none';
+        const c = document.getElementById('imageContainer');
+        if (c) c.innerHTML = '';
+    }
+
     function setGroup(group, btn) {
+        hideImageOutput();
         currentGroup = group;
         document.querySelectorAll('.group-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
@@ -145,6 +184,7 @@
         
         const query = document.getElementById('idInput').value.trim().toLowerCase();
         if (!query) return alert('請輸入關鍵字！');
+        hideImageOutput();
 
         // 安全防錯篩選規則
         const filterRule = (row, idx) => {
@@ -175,6 +215,7 @@
 
     function showFinalResults(targetId) {
         document.getElementById('candidateArea').style.display = 'none';
+        hideImageOutput();
         
         const arrivedItems = dataArrived.filter(row => row && row.length > 3 && row[2] === currentGroup && row[3] === targetId && row[1] !== "已取貨" && row[1] !== "已釋出");
         const notArrivedItems = dataNotArrived.filter(row => row && row.length > 3 && row[2] === currentGroup && row[3] === targetId && row[1] !== "已取貨" && row[1] !== "已釋出");
@@ -201,6 +242,34 @@
 
         const aStats = calc(arrivedList);
         const nStats = calc(notArrivedList);
+
+        // 🖼️ 大字對帳圖：列出已到貨商品，已付款的標「已付」且不算進應付總金額
+        const F = "font-family:'Noto Sans TC', sans-serif;";
+        let imgContent = `
+            <div style="font-size:32px; font-weight:bold; border-bottom:4px solid #000000; padding-bottom:10px; ${F}">ID: ${escapeHtml(targetId)}</div>
+            <div style="font-size:26px; font-weight:bold; margin:15px 0 5px 0; ${F}">【已到貨現場對帳單】</div>`;
+        let receiptTotal = 0;
+        arrivedList.forEach(r => {
+            const isPaid = PAID_STATUS.includes(r[1]);
+            const sub = parseAmount(r[7]);
+            if (!isPaid) receiptTotal += sub;
+            imgContent += `
+                <div class="img-item-row" style="${F}">
+                    <div style="font-size:30px; font-weight:bold; line-height:1.3; color:#000000;">${escapeHtml(r[4] || "未知商品")}</div>
+                    <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-top:8px;">
+                        <div style="font-size:26px; color:#000000;">${escapeHtml(parseAmount(r[5]).toLocaleString())}元 x ${escapeHtml(r[6] || 0)}</div>
+                        <div style="font-size:34px; font-weight:bold; color:#000000;">${isPaid ? '已付' : sub.toLocaleString() + '元'}</div>
+                    </div>
+                </div>`;
+        });
+        if (arrivedList.length === 0) imgContent += `<div style="font-size:26px; padding:20px 0; border-bottom:4px solid #000000; ${F}">目前沒有已到貨商品</div>`;
+        imgContent += `
+            <div style="margin-top:25px; padding-top:15px; font-size:36px; font-weight:bold; text-align:right; ${F} color:#000000;">應付總金額：${receiptTotal.toLocaleString()} 元</div>
+            <div id="receiptTime" style="text-align:right; margin-top:12px; font-size:22px; color:#000000; ${F}"></div>
+            <div style="text-align:center; margin-top:35px; font-size:22px; color:#555; ${F}">謝謝惠顧，歡迎再次光臨！</div>`;
+        document.getElementById('captureArea').innerHTML = imgContent;
+
+        html += `<button type="button" class="print-btn" onclick="generateImage()">🖼️ 生成大字明細圖片 (現場取貨對帳用)</button>`;
 
         html += `
             <div class="summary-box">
@@ -234,6 +303,36 @@
                 <div class="item-info">單價: $${row[5] || 0} | 數量: ${row[6] || 0}</div>
                 ${row[8] ? `<div class="note-text">📝 備註: ${row[8]}</div>` : ''}
             </div>`;
+    }
+
+    async function generateImage() {
+        const area = document.getElementById('captureArea');
+        const output = document.getElementById('imageOutput');
+        const container = document.getElementById('imageContainer');
+        container.innerHTML = "<div style='padding:20px; font-weight:bold; color:#555;'>⏳ 大字明細製圖中，請稍候...</div>";
+        output.style.display = 'block';
+        output.scrollIntoView({ behavior: 'smooth' });
+        try {
+            const timeEl = document.getElementById('receiptTime');
+            if (timeEl) timeEl.textContent = `產生時間：${nowTaipeiText()}`;
+            // 等 Noto Sans TC 載入完成再截圖（最多等 8 秒，逾時就用備用字型）
+            if (document.fonts) {
+                const text = area.textContent || '';
+                await Promise.race([
+                    Promise.all([
+                        document.fonts.load(`400 26px "Noto Sans TC"`, text),
+                        document.fonts.load(`700 30px "Noto Sans TC"`, text)
+                    ]).then(() => document.fonts.ready),
+                    new Promise(r => setTimeout(r, 8000))
+                ]).catch(() => {});
+            }
+            const canvas = await html2canvas(area, { backgroundColor: "#ffffff", scale: 2, logging: false, useCORS: true });
+            container.innerHTML = `<img src="${canvas.toDataURL("image/png")}" alt="北冰洋水產已到貨明細">`;
+            output.scrollIntoView({ behavior: 'smooth' });
+        } catch (e) {
+            console.error(e);
+            container.innerHTML = "<div style='color:red; padding:10px;'>圖片產生失敗，請再試一次。</div>";
+        }
     }
 
     window.onload = initDataLoader;
